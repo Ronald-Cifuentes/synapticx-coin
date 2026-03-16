@@ -10,6 +10,21 @@ from typing import Dict, List, Optional, Set
 from .transactions import PrivateTransaction
 
 
+def tx_inputs_exist_in_state(
+    tx: PrivateTransaction,
+    available_commitments: Set[str],
+) -> tuple[bool, Optional[str]]:
+    """
+    Verifica que todos los inputs de la tx existan en el conjunto de commitments disponibles.
+    Retorna (ok, error_message).
+    """
+    for inp in tx.inputs:
+        comm = inp.commitment if isinstance(inp.commitment, str) else str(inp.commitment)
+        if comm not in available_commitments:
+            return False, f"Input commitment inexistente: {comm[:16]}..."
+    return True, None
+
+
 class ChainState:
     """
     Estado de la cadena: commitments activos, nullifiers gastados.
@@ -40,18 +55,19 @@ class ChainState:
     ) -> tuple[bool, Optional[str]]:
         """
         Verifica si la tx puede aplicarse.
-        known_commitments: si None, asumimos que los inputs existen.
+        OBLIGATORIO: todos los inputs deben existir en state.commitments.
+        known_commitments: si None, se usa self.commitments (estado canónico).
         """
         # Nullifiers no usados
         for nf in tx.nullifiers():
             if self.has_nullifier_used(nf):
                 return False, f"Nullifier ya usado: {nf[:16]}..."
 
-        # Inputs deben existir como commitments
-        if known_commitments is not None:
-            for inp in tx.inputs:
-                if inp.commitment not in known_commitments and inp.commitment not in self.commitments:
-                    return False, f"Commitment no conocido: {inp.commitment[:16]}..."
+        # Inputs DEBEN existir en el estado canónico
+        available = known_commitments if known_commitments is not None else self.commitments
+        ok, err = tx_inputs_exist_in_state(tx, available)
+        if not ok:
+            return False, err
 
         return True, None
 

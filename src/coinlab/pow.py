@@ -2,11 +2,25 @@
 PoW simple: encontrar nonce tal que hash(block) empiece con N ceros (hex).
 
 MVP: no es minería real, solo modela la semántica.
+Trabajo: 16^difficulty (cada cero hex = 4 bits de espacio reducido).
 """
 
 from .blocks import Block, BlockHeader
 from .crypto_primitives import hash_hex
 from .types import BlockHash
+
+
+def block_work(block: Block) -> int:
+    """
+    Trabajo de un bloque. Mayor dificultad = más trabajo.
+    Modelo: 16^d donde d = difficulty (ceros hex al inicio).
+    """
+    return 16 ** block.header.difficulty
+
+
+def cumulative_work(blocks: list) -> int:
+    """Trabajo acumulado de una cadena."""
+    return sum(block_work(b) for b in blocks)
 
 
 def meets_difficulty(h: str, difficulty: int) -> bool:

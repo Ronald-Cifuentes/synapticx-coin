@@ -32,7 +32,10 @@ def main():
             [faucet_note], [half, amt - half], ["alice", "bob"], fee=0
         )
         faucet_note = out_notes[i % 2]
-        mempool.add_transaction(tx)
+        mempool.add_transaction(
+            tx,
+            available_commitments=chain.state.commitments,
+        )
         build_and_mine_block(chain, mempool, "miner")
         total_minted += config.block_reward
 
@@ -43,11 +46,13 @@ def main():
             total_commitments_value += sum(o.amount for o in tx.outputs)
         total_commitments_value += block.coinbase_amount
 
+    ok, err = chain.validate_chain()
+    assert ok, f"Cadena inválida: {err}"
+    assert total_coinbase == len(chain.blocks) * config.block_reward
     print(f"Bloques: {len(chain.blocks)}")
     print(f"Total coinbase: {total_coinbase}")
     print(f"Commitments en estado: {len(chain.state.commitments)}")
     print(f"Supply conservado: OK")
-    assert total_coinbase == len(chain.blocks) * config.block_reward
 
 
 if __name__ == "__main__":

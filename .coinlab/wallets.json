@@ -1,8 +1,8 @@
 {
   "faucet": [
-    "{\"note_id\": \"9be1b2f8312581a9\", \"owner_key\": \"faucet\", \"amount\": 50, \"nonce\": \"453ee0f3f5ac57cbb0a2f5dff70a3532\", \"asset_id\": \"BASE\", \"secret\": \"562322e6f3cc33b4bf88dcf9251bf23c268171d88ceef198324405cc418dbcee\"}"
+    "{\"note_id\": \"811c979cfe373fa2\", \"owner_key\": \"faucet\", \"amount\": 50, \"nonce\": \"702b1f10b925babda538a6cbfba40491\", \"asset_id\": \"BASE\", \"secret\": \"ee3a31ff3f0d78e4f2a34059b19fa8e8e0ca268de820c675364faf64a2b8c969\"}"
   ],
   "alice": [
-    "{\"note_id\": \"7c4849829fb7db71\", \"owner_key\": \"alice\", \"amount\": 50, \"nonce\": \"2fcc4e81d565745630ebd19fd17043fd\", \"asset_id\": \"BASE\", \"secret\": \"76bad234c6ff2b9c2eddc3456d2da4d05a54acac5e2a69060c8f6520d65773ca\"}"
+    "{\"note_id\": \"5a800d448a29a84a\", \"owner_key\": \"alice\", \"amount\": 50, \"nonce\": \"e18f82a9dd9128407e5c10e93404e0e4\", \"asset_id\": \"BASE\", \"secret\": \"e11d4d6ce2842e18e046ce968b4acd60f82aa3a142a0325d6075db87f29c4a1e\"}"
   ]
 }

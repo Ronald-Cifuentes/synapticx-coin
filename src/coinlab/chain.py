@@ -1,19 +1,39 @@
 """
-Cadena lineal PoW: bloques en orden, reorg corto si llega cadena más pesada.
+Cadena lineal PoW: bloques en orden, reorg por trabajo acumulado.
 """
 
 from typing import List, Optional
 
-from .blocks import Block, BlockHeader
+from .blocks import Block, BlockHeader, compute_merkle_root, expected_block_reward
 from .config import Config
 from .crypto_primitives import hash_hex
-from .pow import mine_block, validate_block_pow
+from .pow import cumulative_work, mine_block, validate_block_pow
 from .state import ChainState
 from .transactions import PrivateTransaction, validate_transaction_basic
 from .types import BlockHash
 
 
 GENESIS_PREV = "0" * 64
+
+
+def validate_block(
+    block: Block,
+    height: int,
+    config: Config,
+) -> tuple[bool, Optional[str]]:
+    """
+    Valida bloque: PoW, merkle root, coinbase policy.
+    No valida transacciones contra estado (eso se hace al aplicar).
+    """
+    if not validate_block_pow(block, config.difficulty):
+        return False, "PoW inválido"
+    expected_root = compute_merkle_root(block.transactions)
+    if block.header.merkle_root != expected_root:
+        return False, f"Merkle root inválido: esperado {expected_root[:16]}..."
+    expected_reward = expected_block_reward(height, config)
+    if block.coinbase_amount != expected_reward:
+        return False, f"Coinbase inválida: {block.coinbase_amount} != {expected_reward}"
+    return True, None
 
 
 class Blockchain:
@@ -63,18 +83,17 @@ class Blockchain:
     ) -> tuple[bool, Optional[str]]:
         """
         Añade bloque si es válido.
-        coinbase_owner: para índice auxiliar en demos.
+        Valida: prev_hash, PoW, merkle root, coinbase policy, inputs existen.
         """
-        # Prev hash
+        height = len(self.blocks)
         expected_prev = self.tip_hash()
         if block.header.prev_hash != expected_prev:
             return False, f"prev_hash mismatch: expected {expected_prev[:16]}..."
 
-        # PoW
-        if not validate_block_pow(block, self.config.difficulty):
-            return False, "PoW inválido"
+        ok, err = validate_block(block, height, self.config)
+        if not ok:
+            return False, err
 
-        # Transacciones
         for tx in block.transactions:
             ok, err = validate_transaction_basic(tx)
             if not ok:
@@ -84,7 +103,6 @@ class Blockchain:
                 return False, f"Tx no aplicable: {err}"
             self.state.apply_transaction(tx)
 
-        # Coinbase
         self.state.add_commitment(
             block.coinbase_commitment,
             owner=coinbase_owner,
@@ -95,14 +113,15 @@ class Blockchain:
         return True, None
 
     def validate_chain(self) -> tuple[bool, Optional[str]]:
-        """Valida toda la cadena. Estado debe ser reproducible."""
+        """Valida toda la cadena: PoW, merkle, coinbase, inputs existen."""
         state = ChainState()
         for i, block in enumerate(self.blocks):
             prev = GENESIS_PREV if i == 0 else self.blocks[i - 1].block_hash()
             if block.header.prev_hash != prev:
                 return False, f"Block {i}: prev_hash inválido"
-            if not validate_block_pow(block, self.config.difficulty):
-                return False, f"Block {i}: PoW inválido"
+            ok, err = validate_block(block, i, self.config)
+            if not ok:
+                return False, f"Block {i}: {err}"
             for tx in block.transactions:
                 ok, err = validate_transaction_basic(tx)
                 if not ok:
@@ -116,23 +135,25 @@ class Blockchain:
 
     def reorg_to(self, blocks: List[Block]) -> tuple[bool, Optional[str]]:
         """
-        Reorg corto: reemplaza la cadena actual por blocks si es más pesada.
-        Peso = longitud (MVP simple).
+        Reorg: reemplaza por blocks si tiene MAYOR trabajo acumulado.
+        No basta con ser más larga; debe tener más trabajo.
         """
-        if len(blocks) <= len(self.blocks):
-            return False, "Cadena alternativa no más larga"
-        # Validar cadena alternativa
+        our_work = cumulative_work(self.blocks)
+        their_work = cumulative_work(blocks)
+        if their_work <= our_work:
+            return False, f"Cadena alternativa no más pesada: {their_work} <= {our_work}"
         state = ChainState()
         prev_hash = GENESIS_PREV
-        for block in blocks:
+        for i, block in enumerate(blocks):
             if block.header.prev_hash != prev_hash:
                 return False, "Cadena alternativa inválida"
-            if not validate_block_pow(block, self.config.difficulty):
-                return False, "Cadena alternativa PoW inválido"
+            ok, err = validate_block(block, i, self.config)
+            if not ok:
+                return False, f"Cadena alternativa: {err}"
             for tx in block.transactions:
-                ok, _ = state.can_apply_transaction(tx)
+                ok, err = state.can_apply_transaction(tx)
                 if not ok:
-                    return False, "Cadena alternativa con tx conflictiva"
+                    return False, f"Cadena alternativa: {err}"
                 state.apply_transaction(tx)
             state.add_commitment(block.coinbase_commitment, amount=block.coinbase_amount)
             prev_hash = block.block_hash()

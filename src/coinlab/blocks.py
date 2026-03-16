@@ -4,12 +4,30 @@ Bloques: header + transacciones.
 Cadena lineal PoW, no blockDAG.
 """
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import List
 
+from .config import Config
 from .crypto_primitives import hash_hex
 from .transactions import PrivateTransaction
 from .types import BlockHash
+
+
+def compute_merkle_root(transactions: List[PrivateTransaction]) -> str:
+    """
+    Merkle root de las transacciones del bloque.
+    MVP: hash de tx_ids concatenados. Root vacío si no hay txs.
+    """
+    tx_ids = [tx.tx_id for tx in transactions]
+    return hash_hex("|".join(tx_ids) if tx_ids else "")
+
+
+def expected_block_reward(height: int, config: Config) -> int:
+    """
+    Recompensa esperada para un bloque a la altura dada.
+    MVP: constante config.block_reward para toda altura.
+    """
+    return config.block_reward
 
 
 @dataclass

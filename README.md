@@ -9,7 +9,9 @@
 - Nullifiers públicos para evitar doble gasto
 - Conservación de valor en agregado
 - Estado canónico reproducible
-- Mempool con detección de conflictos por nullifier
+- **Validación fuerte**: inputs deben existir en estado; coinbase según política; merkle root recomputado
+- **Reorg por trabajo acumulado** (no solo longitud)
+- Mempool rechaza tx con inputs inexistentes y conflictos por nullifier
 - CLI: init-chain, create-wallet, mint-demo-notes, create-transfer, show-chain, show-state, show-utxo-equivalent, mine-block, run-demo, validate-chain
 - Tests automatizados
 - Simulaciones: supply correctness, mining distribution, double spend
@@ -25,6 +27,7 @@
 
 ## Limitaciones honestas
 
+- Sigue siendo laboratorio, no seguridad de producción
 - Los primitivos (hash, commitment, nullifier) son simplificaciones para modelar semántica
 - No hay privacidad criptográfica real
 - El índice owner->balance es auxiliar solo para demos
@@ -47,6 +50,7 @@ python -m coinlab.cli run-demo
 ./scripts/run_demo.sh
 
 # Flujo CLI interactivo
+# (Para comenzar desde cero: init-chain --force)
 python -m coinlab.cli init-chain
 python -m coinlab.cli create-wallet alice
 python -m coinlab.cli mint-demo-notes alice 50

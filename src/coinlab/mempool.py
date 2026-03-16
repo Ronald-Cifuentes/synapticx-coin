@@ -1,5 +1,6 @@
 """
-Mempool: pool de transacciones pendientes con detección de conflictos por nullifier.
+Mempool: pool de transacciones pendientes.
+Rechaza tx con inputs inexistentes y conflictos por nullifier.
 """
 
 from typing import Dict, List, Optional, Set
@@ -18,11 +19,18 @@ class Mempool:
         self,
         tx: PrivateTransaction,
         used_nullifiers: Optional[Set[str]] = None,
+        available_commitments: Optional[Set[str]] = None,
     ) -> tuple[bool, Optional[str]]:
         """
-        Añade tx si no hay conflicto de nullifier.
-        used_nullifiers: nullifiers ya usados en cadena (opcional).
+        Añade tx si: inputs existen, no hay conflicto de nullifier.
+        available_commitments: si None, no se valida existencia de inputs.
         """
+        if available_commitments is not None:
+            from .state import tx_inputs_exist_in_state
+
+            ok, err = tx_inputs_exist_in_state(tx, available_commitments)
+            if not ok:
+                return False, err
         nfs = set(tx.nullifiers())
         # Conflicto con cadena
         if used_nullifiers:

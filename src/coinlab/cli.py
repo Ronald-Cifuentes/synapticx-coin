@@ -43,10 +43,18 @@ def _load_chain(store: Store, config: Optional[Config] = None) -> Blockchain:
     return chain
 
 
-def _load_mempool(store: Store, used_nullifiers: Optional[set] = None) -> Mempool:
+def _load_mempool(
+    store: Store,
+    used_nullifiers: Optional[set] = None,
+    available_commitments: Optional[set] = None,
+) -> Mempool:
     mempool = Mempool()
     for tx in store.load_mempool():
-        mempool.add_transaction(tx, used_nullifiers=used_nullifiers)
+        mempool.add_transaction(
+            tx,
+            used_nullifiers=used_nullifiers,
+            available_commitments=available_commitments,
+        )
     return mempool
 
 
@@ -68,12 +76,17 @@ def _save_wallets(store: Store, owner_notes: dict) -> None:
 def init_chain(
     data_dir: Path = DATA_DIR_OPTION,
     difficulty: int = typer.Option(2, help="Dificultad PoW (ceros hex)"),
+    force: bool = typer.Option(False, "--force", "-f", help="Sobrescribir cadena existente"),
 ):
     """Inicializa cadena con bloque genesis."""
     store = _get_store(data_dir)
-    if store.load_blocks():
-        typer.echo("Cadena ya existe. Usa --force para sobrescribir (no implementado).")
+    if store.load_blocks() and not force:
+        typer.echo("Cadena ya existe. Para resetear y comenzar de cero: init-chain --force")
         raise typer.Exit(1)
+    if force and store.load_blocks():
+        store.save_blocks([])
+        store.save_wallets({})
+        store.save_mempool([])
     config = Config(difficulty=difficulty)
     chain = Blockchain(config)
     block, faucet_note = chain.create_genesis("faucet")
@@ -111,7 +124,11 @@ def mint_demo_notes(
     owner_notes = _wallets_to_notes(store)
     faucet_notes = owner_notes.get("faucet", [])
     if not faucet_notes:
-        typer.echo("Faucet sin notas. Ejecuta init-chain primero.")
+        has_chain = bool(store.load_blocks())
+        if has_chain:
+            typer.echo("Faucet sin notas (ya gastó todo). Ejecuta 'init-chain --force' para resetear.")
+        else:
+            typer.echo("Faucet sin notas. Ejecuta init-chain primero.")
         raise typer.Exit(1)
     note = faucet_notes[0]
     if note.amount < amount:
@@ -128,8 +145,16 @@ def mint_demo_notes(
     tx, output_notes = create_transfer_with_output_notes(
         input_notes, output_amounts, output_owners, fee=0
     )
-    mempool = _load_mempool(store, chain.state.nullifiers_used)
-    ok, err = mempool.add_transaction(tx, used_nullifiers=chain.state.nullifiers_used)
+    mempool = _load_mempool(
+        store,
+        chain.state.nullifiers_used,
+        chain.state.commitments,
+    )
+    ok, err = mempool.add_transaction(
+        tx,
+        used_nullifiers=chain.state.nullifiers_used,
+        available_commitments=chain.state.commitments,
+    )
     if not ok:
         typer.echo(f"Error mempool: {err}")
         raise typer.Exit(1)
@@ -177,8 +202,16 @@ def create_transfer(
     tx, output_notes = create_transfer_with_output_notes(
         input_notes, output_amounts, output_owners, fee=fee
     )
-    mempool = _load_mempool(store, chain.state.nullifiers_used)
-    ok, err = mempool.add_transaction(tx, used_nullifiers=chain.state.nullifiers_used)
+    mempool = _load_mempool(
+        store,
+        chain.state.nullifiers_used,
+        chain.state.commitments,
+    )
+    ok, err = mempool.add_transaction(
+        tx,
+        used_nullifiers=chain.state.nullifiers_used,
+        available_commitments=chain.state.commitments,
+    )
     if not ok:
         typer.echo(f"Error mempool: {err}")
         raise typer.Exit(1)
@@ -243,7 +276,11 @@ def mine_block(
     """Mina un bloque con txs del mempool."""
     store = _get_store(data_dir)
     chain = _load_chain(store)
-    mempool = _load_mempool(store, chain.state.nullifiers_used)
+    mempool = _load_mempool(
+        store,
+        chain.state.nullifiers_used,
+        chain.state.commitments,
+    )
     block = build_and_mine_block(chain, mempool, miner)
     store.save_blocks(chain.blocks)
     store.save_mempool(mempool.all_transactions())
@@ -278,7 +315,10 @@ def _run_demo_in_memory() -> None:
         [faucet_note], [50, 50], ["alice", "bob"], fee=0
     )
     mempool = Mempool()
-    ok, _ = mempool.add_transaction(tx1)
+    ok, _ = mempool.add_transaction(
+        tx1,
+        available_commitments=chain.state.commitments,
+    )
     assert ok
     typer.echo("2. Tx creada: faucet -> alice(50), bob(50)")
     block2 = build_and_mine_block(chain, mempool, "miner")
@@ -287,13 +327,19 @@ def _run_demo_in_memory() -> None:
     tx2, _ = create_transfer_with_output_notes(
         [out_notes[0]], [50], ["bob"], fee=0
     )
-    ok, err = mempool.add_transaction(tx2)
+    ok, err = mempool.add_transaction(
+        tx2,
+        available_commitments=chain.state.commitments,
+    )
     assert ok
     typer.echo("4. Tx: alice -> bob 50")
     tx_double, _ = create_transfer_with_output_notes(
         [out_notes[0]], [50], ["miner"], fee=0
     )
-    ok, err = mempool.add_transaction(tx_double)
+    ok, err = mempool.add_transaction(
+        tx_double,
+        available_commitments=chain.state.commitments,
+    )
     typer.echo("5. Intento doble gasto (alice -> miner):")
     if ok:
         typer.echo("   ERROR: doble gasto aceptado (bug)")

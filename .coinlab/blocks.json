@@ -14,14 +14,14 @@
   {
     "header": {
       "prev_hash": "00fe5620cbfbf976d3b9d6b146e051e8ee80aa434b7dbacfd5c2f0d336c83619",
-      "merkle_root": "edfd3f08e7661114b4bf0e80d7dfd313a537f37fa0c3a7846c62e4e7a0b27b3c",
-      "timestamp": 1773630227,
-      "nonce": 320,
+      "merkle_root": "3d90bb89fddb46346ecc64859bad09d521a1599f0c1d57da0a535785c3d396c6",
+      "timestamp": 1773631603,
+      "nonce": 651,
       "difficulty": 2
     },
     "transactions": [
       {
-        "tx_id": "b2cee2cf287de48ca1f07781b96f8006",
+        "tx_id": "b6b80a00fe7e8cffe09f6f2a5455c1f1",
         "inputs": [
           {
             "commitment": "b90a6e48fdcfc5e28a617e50936156e7c4365a845e8b00f6ac5bc42d32f89ccd",
@@ -32,12 +32,12 @@
         ],
         "outputs": [
           {
-            "commitment": "60b5e77f5fe0872be31f347920e8212691ae6620ee82ca54b3d3a397fd476d31",
+            "commitment": "86470d3787bf4aa4362d6019c54f0c802b2fb1550941fe3a7e38342c2a227d57",
             "amount": 50,
             "asset_id": "BASE"
           },
           {
-            "commitment": "1ae40cdeeb0c679906d2c73c397439b0d43c78d4f8ea4db409d0822806a50ce4",
+            "commitment": "b34f373137b6f7772edeec6b4198b8f932afcc42b12b9cc0c2e008c27a1170da",
             "amount": 50,
             "asset_id": "BASE"
           }
@@ -45,7 +45,7 @@
         "fee": 0
       }
     ],
-    "coinbase_commitment": "6ce7b9eb2f1d89e38ce54f5ba5df02313001f95f76f76997ed8bc520112adb05",
+    "coinbase_commitment": "015d8c57737051866ce496c42a3a7ef27be2c5bc43008000593f849d86f2eafb",
     "coinbase_amount": 100
   }
 ]

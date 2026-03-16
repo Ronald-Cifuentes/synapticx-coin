@@ -24,7 +24,10 @@ def main():
         [faucet_note], [50, 50], ["alice", "bob"], fee=0
     )
     mempool = Mempool()
-    mempool.add_transaction(tx1)
+    mempool.add_transaction(
+        tx1,
+        available_commitments=chain.state.commitments,
+    )
     build_and_mine_block(chain, mempool, "miner")
 
     alice_note = out_notes[0]
@@ -36,12 +39,53 @@ def main():
     )
 
     mempool = Mempool()
-    ok1, _ = mempool.add_transaction(tx_legit)
-    ok2, err2 = mempool.add_transaction(tx_attack)
+    ok1, _ = mempool.add_transaction(
+        tx_legit,
+        available_commitments=chain.state.commitments,
+    )
+    ok2, err2 = mempool.add_transaction(
+        tx_attack,
+        available_commitments=chain.state.commitments,
+    )
     assert ok1
     assert not ok2, "Doble gasto debería ser rechazado"
     print("Doble gasto rechazado correctamente")
     print(f"Error esperado: {err2}")
+
+    # Caso adicional: tx con input inexistente
+    from coinlab.transactions import (
+        PrivateTransaction,
+        TransactionInput,
+        TransactionOutput,
+    )
+    from coinlab.crypto_primitives import hash_hex
+    from coinlab.types import CommitmentHash, TxId
+
+    fake_tx = PrivateTransaction(
+        tx_id=TxId("fake_tx"),
+        inputs=[
+            TransactionInput(
+                commitment=CommitmentHash(hash_hex("input_inventado")),
+                nullifier=hash_hex("nf_fake"),
+                amount=50,
+                asset_id="BASE",
+            )
+        ],
+        outputs=[
+            TransactionOutput(
+                commitment=CommitmentHash(hash_hex("out_fake")),
+                amount=50,
+                asset_id="BASE",
+            )
+        ],
+        fee=0,
+    )
+    ok_fake, err_fake = mempool.add_transaction(
+        fake_tx,
+        available_commitments=chain.state.commitments,
+    )
+    assert not ok_fake, "Input inexistente debería ser rechazado"
+    print("Input inexistente rechazado correctamente")
 
 
 if __name__ == "__main__":

@@ -65,6 +65,7 @@ python -m coinlab.cli run-demo
 ./scripts/run_demo.sh
 
 # Flujo CLI interactivo
+# (Para comenzar desde cero: init-chain --force)
 python -m coinlab.cli init-chain
 python -m coinlab.cli create-wallet alice
 python -m coinlab.cli mint-demo-notes alice 50

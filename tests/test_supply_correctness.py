@@ -20,7 +20,10 @@ def test_supply_aggregate_conserved():
         [faucet_note], [50, 50], ["alice", "bob"], fee=0
     )
     mempool = Mempool()
-    mempool.add_transaction(tx1)
+    mempool.add_transaction(
+        tx1,
+        available_commitments=chain.state.commitments,
+    )
     build_and_mine_block(chain, mempool, "miner")
     supply_after = initial_supply + config.block_reward
     total_commitments = sum(

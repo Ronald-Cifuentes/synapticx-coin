@@ -5,8 +5,8 @@ Miner: construye bloque candidato, incluye coinbase, mina PoW.
 import time
 from typing import List, Optional
 
-from .blocks import Block
-from .chain import Blockchain, GENESIS_PREV
+from .blocks import Block, compute_merkle_root
+from .chain import Blockchain
 from .config import Config
 from .crypto_primitives import commitment_for_note, hash_hex
 from .mempool import Mempool
@@ -34,9 +34,7 @@ def build_and_mine_block(
         miner_address, cfg.block_reward, nonce, cfg.default_asset_id
     )
 
-    # Merkle root MVP: hash de tx_ids
-    tx_ids = [tx.tx_id for tx in txs]
-    merkle_root = hash_hex("|".join(tx_ids) if tx_ids else "")
+    merkle_root = compute_merkle_root(txs)
 
     block = mine_block(
         prev_hash=chain.tip_hash(),
