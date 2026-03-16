@@ -1,0 +1,19 @@
+Taxonomía obligatoria
+
+[CONVICCIÓN ESTRUCTURAL]
+Regla dura del sistema. No depende de que una investigación futura “salga bien”.
+
+[HIPÓTESIS DE DISEÑO]
+Dirección razonable, pero todavía no demostrada.
+
+[BLOQUEANTE DE INVESTIGACIÓN]
+Problema abierto cuyo fracaso invalida o recorta la arquitectura.
+
+[DESCARTADO]
+Enfoque rechazado por razones estructurales.
+
+[DOWNGRADE PATH]
+Ruta de simplificación si la hipótesis falla.
+
+[KILL CRITERION]
+Condición que obliga a detener o reiniciar una parte del proyecto.

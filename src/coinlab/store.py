@@ -1,0 +1,136 @@
+"""
+Persistencia mínima: JSON en directorio de datos.
+"""
+
+import json
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+
+from .blocks import Block, BlockHeader
+from .chain import Blockchain, GENESIS_PREV
+from .config import Config
+from .notes import Note, deserialize_note, serialize_note
+from .transactions import (
+    PrivateTransaction,
+    TransactionInput,
+    TransactionOutput,
+)
+from .types import CommitmentHash, TxId
+
+
+def _serialize_tx(tx: PrivateTransaction) -> Dict[str, Any]:
+    return {
+        "tx_id": tx.tx_id,
+        "inputs": [
+            {
+                "commitment": i.commitment,
+                "nullifier": i.nullifier,
+                "amount": i.amount,
+                "asset_id": i.asset_id,
+            }
+            for i in tx.inputs
+        ],
+        "outputs": [
+            {
+                "commitment": o.commitment,
+                "amount": o.amount,
+                "asset_id": o.asset_id,
+            }
+            for o in tx.outputs
+        ],
+        "fee": tx.fee,
+    }
+
+
+def _deserialize_tx(d: Dict[str, Any]) -> PrivateTransaction:
+    return PrivateTransaction(
+        tx_id=TxId(d["tx_id"]),
+        inputs=[
+            TransactionInput(
+                commitment=CommitmentHash(i["commitment"]),
+                nullifier=i["nullifier"],
+                amount=i["amount"],
+                asset_id=i["asset_id"],
+            )
+            for i in d["inputs"]
+        ],
+        outputs=[
+            TransactionOutput(
+                commitment=CommitmentHash(o["commitment"]),
+                amount=o["amount"],
+                asset_id=o["asset_id"],
+            )
+            for o in d["outputs"]
+        ],
+        fee=d["fee"],
+    )
+
+
+def _serialize_block(block: Block) -> Dict[str, Any]:
+    return {
+        "header": {
+            "prev_hash": block.header.prev_hash,
+            "merkle_root": block.header.merkle_root,
+            "timestamp": block.header.timestamp,
+            "nonce": block.header.nonce,
+            "difficulty": block.header.difficulty,
+        },
+        "transactions": [_serialize_tx(tx) for tx in block.transactions],
+        "coinbase_commitment": block.coinbase_commitment,
+        "coinbase_amount": block.coinbase_amount,
+    }
+
+
+def _deserialize_block(d: Dict[str, Any]) -> Block:
+    return Block(
+        header=BlockHeader(
+            prev_hash=d["header"]["prev_hash"],
+            merkle_root=d["header"]["merkle_root"],
+            timestamp=d["header"]["timestamp"],
+            nonce=d["header"]["nonce"],
+            difficulty=d["header"]["difficulty"],
+        ),
+        transactions=[_deserialize_tx(tx) for tx in d["transactions"]],
+        coinbase_commitment=d["coinbase_commitment"],
+        coinbase_amount=d["coinbase_amount"],
+    )
+
+
+class Store:
+    """Almacenamiento en directorio."""
+
+    def __init__(self, data_dir: Path) -> None:
+        self.data_dir = Path(data_dir)
+        self.data_dir.mkdir(parents=True, exist_ok=True)
+        self.blocks_file = self.data_dir / "blocks.json"
+        self.wallets_file = self.data_dir / "wallets.json"
+        self.mempool_file = self.data_dir / "mempool.json"
+
+    def save_blocks(self, blocks: List[Block]) -> None:
+        data = [_serialize_block(b) for b in blocks]
+        self.blocks_file.write_text(json.dumps(data, indent=2))
+
+    def load_blocks(self) -> List[Block]:
+        if not self.blocks_file.exists():
+            return []
+        data = json.loads(self.blocks_file.read_text())
+        return [_deserialize_block(d) for d in data]
+
+    def save_wallets(self, wallets: Dict[str, List[str]]) -> None:
+        """wallets: owner -> list of serialized notes"""
+        self.wallets_file.write_text(json.dumps(wallets, indent=2))
+
+    def load_wallets(self) -> Dict[str, List[str]]:
+        if not self.wallets_file.exists():
+            return {}
+        return json.loads(self.wallets_file.read_text())
+
+    def save_mempool(self, tx_list: List[PrivateTransaction]) -> None:
+        data = [_serialize_tx(tx) for tx in tx_list]
+        self.mempool_file.write_text(json.dumps(data, indent=2))
+
+    def load_mempool(self) -> List[PrivateTransaction]:
+        if not self.mempool_file.exists():
+            return []
+        data = json.loads(self.mempool_file.read_text())
+        return [_deserialize_tx(d) for d in data]
