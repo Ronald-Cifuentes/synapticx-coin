@@ -1,5 +1,7 @@
 """
-Tests de invariantes de seguridad: falsificación rechazada.
+Tests de invariantes de seguridad.
+Comportamiento real: autorización contra estado, amount/asset resueltos desde estado,
+unicidad de commitments, difficulty policy.
 """
 
 import pytest
@@ -20,7 +22,7 @@ from coinlab.types import CommitmentHash, TxId
 
 
 def test_forged_input_amount_on_existing_commitment_fails():
-    """Exploit: commitment real, amount inventado. Invariant: amount falsificado rechazado."""
+    """Input amount declarado no gobierna; conservation usa amount del estado."""
     config = Config(difficulty=2)
     chain = Blockchain(config)
     block, faucet_note = chain.create_genesis("faucet")
@@ -48,11 +50,11 @@ def test_forged_input_amount_on_existing_commitment_fails():
     )
     ok, err = chain.state.can_apply_transaction(tx)
     assert not ok
-    assert "Amount" in err or "falsificado" in err.lower() or "Desbalance" in err
+    assert "Desbalance" in err or "desde estado" in err.lower()
 
 
 def test_forged_nullifier_for_existing_commitment_fails():
-    """Exploit: commitment real, nullifier inventado. Invariant: nullifier falsificado rechazado."""
+    """Nullifier debe derivar de witness; secret inválido rechazado por autorización."""
     config = Config(difficulty=2)
     chain = Blockchain(config)
     block, faucet_note = chain.create_genesis("faucet")
@@ -84,7 +86,7 @@ def test_forged_nullifier_for_existing_commitment_fails():
 
 
 def test_spend_requires_valid_note_witness():
-    """Exploit: gastar sin witness correcto. Invariant: gasto requiere witness válido."""
+    """Gasto requiere secret que coincida con owner_secret_hash en estado."""
     config = Config(difficulty=2)
     chain = Blockchain(config)
     block, faucet_note = chain.create_genesis("faucet")
@@ -129,7 +131,7 @@ def test_spend_requires_valid_note_witness():
 
 
 def test_validate_chain_rejects_forged_commitment_spend():
-    """Exploit: cadena con gasto falsificado. Invariant: validate_chain rechaza."""
+    """Cadena con input inexistente: validate_chain rechaza."""
     config = Config(difficulty=2)
     chain = Blockchain(config)
     chain.create_genesis("faucet")
@@ -171,7 +173,7 @@ def test_validate_chain_rejects_forged_commitment_spend():
 
 
 def test_block_with_forged_header_difficulty_fails():
-    """Exploit: bloque con header.difficulty != policy. Invariant: difficulty fijada contra policy."""
+    """Bloque con header.difficulty distinto a policy: rechazado."""
     config = Config(difficulty=2)
     chain = Blockchain(config)
     chain.create_genesis("faucet")
@@ -190,7 +192,7 @@ def test_block_with_forged_header_difficulty_fails():
 
 
 def test_block_work_does_not_trust_free_header_difficulty():
-    """Invariant: block_work usa policy, no header.difficulty."""
+    """block_work usa difficulty de policy, no del header."""
     config = Config(difficulty=2)
     chain = Blockchain(config)
     chain.create_genesis("faucet")
@@ -210,7 +212,7 @@ def test_block_work_does_not_trust_free_header_difficulty():
 
 
 def test_reorg_rejects_fake_heavier_chain_with_invalid_difficulty():
-    """Exploit: cadena con bloque de difficulty inflada. Invariant: reorg rechaza."""
+    """Cadena con bloque de difficulty incoherente con policy: reorg rechaza."""
     config = Config(difficulty=2)
     chain = Blockchain(config)
     chain.create_genesis("faucet")
@@ -237,7 +239,7 @@ def test_reorg_rejects_fake_heavier_chain_with_invalid_difficulty():
 
 
 def test_conservation_uses_validated_input_amounts_not_claimed_amounts():
-    """Invariant: conservation usa amounts validados del estado, no declarados."""
+    """Conservation usa amount resuelto desde estado; input.amount no es fuente de verdad."""
     config = Config(difficulty=2)
     chain = Blockchain(config)
     block, faucet_note = chain.create_genesis("faucet")
@@ -270,4 +272,4 @@ def test_conservation_uses_validated_input_amounts_not_claimed_amounts():
     )
     ok, err = chain.state.can_apply_transaction(bad_tx)
     assert not ok
-    assert "Amount" in err or "falsificado" in err.lower() or "Desbalance" in err
+    assert "Desbalance" in err or "desde estado" in err.lower()

@@ -111,7 +111,7 @@ class ChainState:
         all_seen = getattr(self, "all_commitments_seen", set()) or set()
         for out in tx.outputs:
             if asset_from_state is not None and out.asset_id != asset_from_state:
-                return False, f"Asset falsificado en output: {out.asset_id} != {asset_from_state}"
+                return False, f"Output asset no coherente con asset resuelto desde estado: {out.asset_id} != {asset_from_state}"
             c = out.commitment if isinstance(out.commitment, str) else str(out.commitment)
             if c in all_seen:
                 return False, f"Commitment reutilizado: {c[:16]}... ya existe"

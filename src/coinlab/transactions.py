@@ -16,7 +16,7 @@ from .types import CommitmentHash, TxId
 @dataclass
 class TransactionInput:
     """Input: commitment + nullifier + amount + asset_id + witness (secret).
-    El secret permite derivar nullifier; el estado valida amount/asset contra la nota almacenada.
+    El secret permite derivar nullifier; amount y asset se resuelven desde la nota en estado, no desde el input.
     """
 
     commitment: CommitmentHash
