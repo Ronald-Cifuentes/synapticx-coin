@@ -7,6 +7,7 @@ from typing import List, Optional
 from .blocks import (
     Block,
     BlockHeader,
+    block_has_duplicate_commitments,
     block_has_internal_nullifier_conflict,
     compute_merkle_root,
     expected_block_difficulty,
@@ -48,6 +49,11 @@ def validate_block(
     has_conflict, err = block_has_internal_nullifier_conflict(block.transactions)
     if has_conflict:
         return False, err or "Nullifier duplicado en bloque"
+    has_dup, err = block_has_duplicate_commitments(
+        block.transactions, block.coinbase_commitment
+    )
+    if has_dup:
+        return False, err or "Commitment duplicado en bloque"
     for tx in block.transactions:
         ok, err = validate_transaction_basic(tx)
         if not ok:
@@ -121,13 +127,15 @@ class Blockchain:
                 return False, f"Tx no aplicable: {err}"
             temp_state.apply_transaction(tx)
 
-        temp_state.add_commitment(
+        ok, err = temp_state.add_commitment(
             block.coinbase_commitment,
             owner=coinbase_owner,
             amount=block.coinbase_amount,
             asset_id=self.config.default_asset_id,
             owner_secret_hash_val=block.coinbase_owner_secret_hash or None,
         )
+        if not ok:
+            return False, err or "Coinbase no aplicable"
 
         self.state = temp_state
         self.blocks.append(block)
@@ -151,12 +159,14 @@ class Blockchain:
                 if not ok:
                     return False, f"Block {i}: {err}"
                 state.apply_transaction(tx)
-            state.add_commitment(
+            ok, err = state.add_commitment(
                 block.coinbase_commitment,
                 amount=block.coinbase_amount,
                 asset_id=self.config.default_asset_id,
                 owner_secret_hash_val=block.coinbase_owner_secret_hash or None,
             )
+            if not ok:
+                return False, f"Block {i}: {err}"
         return True, None
 
     def reorg_to(self, blocks: List[Block]) -> tuple[bool, Optional[str]]:
@@ -183,12 +193,14 @@ class Blockchain:
                 if not ok:
                     return False, f"Cadena alternativa: {err}"
                 temp_state.apply_transaction(tx)
-            temp_state.add_commitment(
+            ok, err = temp_state.add_commitment(
                 block.coinbase_commitment,
                 amount=block.coinbase_amount,
                 asset_id=self.config.default_asset_id,
                 owner_secret_hash_val=block.coinbase_owner_secret_hash or None,
             )
+            if not ok:
+                return False, f"Cadena alternativa: {err}"
             prev_hash = block.block_hash()
         self.blocks = blocks
         self.state = temp_state

@@ -189,8 +189,13 @@ def validate_transaction_basic(tx: PrivateTransaction) -> tuple[bool, Optional[s
     for i in tx.inputs:
         if i.asset_id != asset:
             return False, "Asset mezclado en inputs"
+    seen: set = set()
     for o in tx.outputs:
         if o.asset_id != asset:
             return False, "Asset mezclado en outputs"
+        c = o.commitment if isinstance(o.commitment, str) else str(o.commitment)
+        if c in seen:
+            return False, f"Output duplicado en misma tx: {c[:16]}..."
+        seen.add(c)
 
     return True, None

@@ -38,6 +38,26 @@ def block_has_internal_nullifier_conflict(
     return False, None
 
 
+def block_has_duplicate_commitments(
+    transactions: List[PrivateTransaction],
+    coinbase_commitment: str,
+) -> tuple[bool, Optional[str]]:
+    """
+    Detecta commitments duplicados dentro del bloque (outputs + coinbase).
+    Retorna (has_duplicate, error_message).
+    """
+    seen: Set[str] = set()
+    for tx in transactions:
+        for out in tx.outputs:
+            c = out.commitment if isinstance(out.commitment, str) else str(out.commitment)
+            if c in seen:
+                return True, f"Commitment duplicado en bloque: {c[:16]}..."
+            seen.add(c)
+    if coinbase_commitment in seen:
+        return True, f"Coinbase reutiliza commitment de output: {coinbase_commitment[:16]}..."
+    return False, None
+
+
 def expected_block_reward(height: int, config: Config) -> int:
     """
     Recompensa esperada para un bloque a la altura dada.

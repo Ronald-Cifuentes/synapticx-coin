@@ -9,7 +9,7 @@
 - Nullifiers públicos para evitar doble gasto
 - Conservación de valor en agregado
 - Estado canónico reproducible
-- **Validación fuerte**: autorización real (hash(secret)==owner_secret_hash); amount/asset desde estado; coinbase según política; difficulty fijada contra policy; merkle root recomputado
+- **Validación fuerte**: autorización real (hash(secret)==owner_secret_hash); amount/asset desde estado; commitment único no reutilizable; coinbase según política; difficulty fijada contra policy; merkle root recomputado
 - **Reorg por trabajo acumulado** (no solo longitud)
 - Mempool rechaza tx con inputs inexistentes y conflictos por nullifier
 - CLI: init-chain, create-wallet, mint-demo-notes, create-transfer, show-chain, show-state, show-utxo-equivalent, mine-block, run-demo, validate-chain
@@ -32,6 +32,7 @@
 - No hay privacidad criptográfica real (el secret se revela en la tx)
 - El laboratorio exige autorización verificable contra estado (owner_secret_hash)
 - Los inputs ya no se validan por autoconsistencia del atacante; hash(secret) debe coincidir con el almacenado
+- El commitment es identificador único no reutilizable; no puede reaparecer como output ni coinbase
 - El índice owner->balance es auxiliar solo para demos
 - PoW con dificultad baja (2 ceros hex) para demos rápidos
 

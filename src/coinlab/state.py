@@ -41,18 +41,21 @@ class ChainState:
     """
     Estado de la cadena: notas con NoteRecord (amount, asset_id, owner_secret_hash).
     Valida autorización real: hash(secret) == owner_secret_hash.
+    all_commitments_seen: commitments históricos (no reutilizables).
     Índice owner->amount solo para demos; no es parte del protocolo.
     """
 
     commitments: Set[str]
     notes: Dict[str, NoteRecord]  # commitment -> NoteRecord
     nullifiers_used: Set[str]
+    all_commitments_seen: Set[str]  # histórico: ningún commitment puede reaparecer
     _owner_index: Dict[str, int]
 
     def __init__(self) -> None:
         self.commitments = set()
         self.notes = {}
         self.nullifiers_used = set()
+        self.all_commitments_seen = set()
         self._owner_index = {}
 
     def has_commitment(self, c: str) -> bool:
@@ -104,9 +107,17 @@ class ChainState:
         if total_in_from_state != total_out_plus_fee:
             return False, f"Desbalance: in={total_in_from_state} (desde estado), out+fee={total_out_plus_fee}"
 
+        outputs_seen: Set[str] = set()
+        all_seen = getattr(self, "all_commitments_seen", set()) or set()
         for out in tx.outputs:
             if asset_from_state is not None and out.asset_id != asset_from_state:
                 return False, f"Asset falsificado en output: {out.asset_id} != {asset_from_state}"
+            c = out.commitment if isinstance(out.commitment, str) else str(out.commitment)
+            if c in all_seen:
+                return False, f"Commitment reutilizado: {c[:16]}... ya existe"
+            if c in outputs_seen:
+                return False, f"Output duplicado en misma tx: {c[:16]}..."
+            outputs_seen.add(c)
 
         return True, None
 
@@ -117,6 +128,7 @@ class ChainState:
     ) -> None:
         """
         Aplica la transacción al estado.
+        Rechaza overwrite: no permite commitment reutilizado.
         output_owners: solo para índice auxiliar en demos; None = no indexar.
         """
         for inp in tx.inputs:
@@ -127,6 +139,9 @@ class ChainState:
 
         for out in tx.outputs:
             c = out.commitment if isinstance(out.commitment, str) else str(out.commitment)
+            if c in self.all_commitments_seen:
+                raise ValueError(f"Commitment reutilizado: {c[:16]}... ya existe")
+            self.all_commitments_seen.add(c)
             self.commitments.add(c)
             self.notes[c] = NoteRecord(
                 amount=out.amount,
@@ -145,8 +160,11 @@ class ChainState:
         amount: int = 0,
         asset_id: str = "BASE",
         owner_secret_hash_val: Optional[str] = None,
-    ) -> None:
-        """Añade un commitment (ej. coinbase) con NoteRecord completo."""
+    ) -> tuple[bool, Optional[str]]:
+        """Añade un commitment (ej. coinbase) con NoteRecord completo. Rechaza reuse."""
+        if comm in self.all_commitments_seen:
+            return False, f"Coinbase commitment reutilizado: {comm[:16]}..."
+        self.all_commitments_seen.add(comm)
         self.commitments.add(comm)
         self.notes[comm] = NoteRecord(
             amount=amount,
@@ -155,6 +173,7 @@ class ChainState:
         )
         if owner is not None:
             self._owner_index[owner] = self._owner_index.get(owner, 0) + amount
+        return True, None
 
     def get_owner_balance(self, owner: str) -> int:
         """Balance según índice auxiliar (solo demos). No resta gastos."""
@@ -166,5 +185,6 @@ class ChainState:
         other.commitments = self.commitments.copy()
         other.notes = {k: NoteRecord(v.amount, v.asset_id, v.owner_secret_hash) for k, v in self.notes.items()}
         other.nullifiers_used = self.nullifiers_used.copy()
+        other.all_commitments_seen = self.all_commitments_seen.copy()
         other._owner_index = self._owner_index.copy()
         return other
