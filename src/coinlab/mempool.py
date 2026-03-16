@@ -69,29 +69,6 @@ class Mempool:
         self._nullifiers_pending.update(nfs)
         return True, None
 
-    def add_transaction(
-        self,
-        tx: PrivateTransaction,
-        used_nullifiers: Optional[Set[str]] = None,
-        available_commitments: Optional[Set[str]] = None,
-    ) -> tuple[bool, Optional[str]]:
-        """
-        DEPRECADO: usa add_transaction_validated(tx, chain_state).
-        Verifica verify_tx_id y validate_transaction_basic; no valida contra estado.
-        Uso controlado: tests/simulaciones que pasan available_commitments explícitamente.
-        """
-        ok, err = verify_tx_id(tx)
-        if not ok:
-            return False, err
-        ok, err = validate_transaction_basic(tx)
-        if not ok:
-            return False, err
-        return self._add_transaction_internal(
-            tx,
-            used_nullifiers=used_nullifiers,
-            available_commitments=available_commitments,
-        )
-
     def remove_transaction(self, tx_id: str) -> None:
         """Elimina tx del mempool (ej. ya incluida en bloque)."""
         if tx_id in self._txs:

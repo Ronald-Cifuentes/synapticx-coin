@@ -109,6 +109,8 @@ python -m coinlab.cli run-demo
 
 ### 6. RESULTADO DE TESTS
 
+**Nota histórica:** Los valores siguientes reflejan el estado en el momento de la implementación. Estado actual: 108 tests (`pytest tests/ -v`).
+
 ```
 97 passed in 0.77s
 ```

@@ -31,3 +31,7 @@ def main():
     store.save_blocks(chain.blocks)
     print(f"Fixture generado en {out_dir}")
     print(f"  config.json, blocks.json ({len(chain.blocks)} bloque(s))")
+
+
+if __name__ == "__main__":
+    main()

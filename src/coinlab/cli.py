@@ -14,7 +14,6 @@ from .miner import build_and_mine_block
 from .notes import create_note, deserialize_note, serialize_note
 from .store import Store
 from .transactions import (
-    create_transfer_transaction,
     create_transfer_with_output_notes,
     validate_transaction_basic,
 )
