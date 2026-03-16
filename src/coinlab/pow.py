@@ -41,10 +41,15 @@ def mine_block(
     transactions: list,
     coinbase_commitment: str,
     coinbase_amount: int,
+    coinbase_owner_secret_hash: str = "",
+    chain_params_hash: str | None = None,
 ) -> Block:
     """
     Mina un bloque: busca nonce hasta cumplir dificultad.
+    Todos los campos state-relevant deben estar fijados antes de minar;
+    el block_hash los incluye para autenticación criptográfica.
     """
+    cph = chain_params_hash or ""
     nonce = 0
     while True:
         header = BlockHeader(
@@ -59,6 +64,8 @@ def mine_block(
             transactions=transactions,
             coinbase_commitment=coinbase_commitment,
             coinbase_amount=coinbase_amount,
+            coinbase_owner_secret_hash=coinbase_owner_secret_hash,
+            chain_params_hash=chain_params_hash or None,
         )
         h = block.block_hash()
         if meets_difficulty(h, difficulty):

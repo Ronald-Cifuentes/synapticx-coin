@@ -101,8 +101,8 @@ def test_spend_requires_valid_note_witness():
         transactions=[tx],
         coinbase_commitment=hash_hex("cb"),
         coinbase_amount=config.block_reward,
+        coinbase_owner_secret_hash=owner_secret_hash("miner_secret"),
     )
-    block.coinbase_owner_secret_hash = owner_secret_hash("miner_secret")
     chain.add_block(block, coinbase_owner="miner")
     alice_note = out_notes[0]
     tx_attack = PrivateTransaction(

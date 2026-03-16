@@ -17,6 +17,7 @@ from coinlab.transactions import (
     TransactionInput,
     TransactionOutput,
     create_transfer_with_output_notes,
+    tx_id_from_payload,
 )
 from coinlab.types import CommitmentHash, TxId
 
@@ -67,7 +68,7 @@ def test_add_block_rejects_reused_existing_commitment_output():
     )
     chain.state.apply_transaction(tx1)
     hijack_tx = PrivateTransaction(
-        tx_id=TxId("hijack"),
+        tx_id=TxId(""),
         inputs=[
             TransactionInput(
                 commitment=out_notes[0].commitment(),
@@ -87,6 +88,7 @@ def test_add_block_rejects_reused_existing_commitment_output():
         ],
         fee=0,
     )
+    hijack_tx.tx_id = tx_id_from_payload(hijack_tx)
     blk = mine_block(
         prev_hash=chain.tip_hash(),
         merkle_root=compute_merkle_root([hijack_tx]),
@@ -95,8 +97,8 @@ def test_add_block_rejects_reused_existing_commitment_output():
         transactions=[hijack_tx],
         coinbase_commitment=hash_hex("cb"),
         coinbase_amount=config.block_reward,
+        coinbase_owner_secret_hash=owner_secret_hash("miner"),
     )
-    blk.coinbase_owner_secret_hash = owner_secret_hash("miner")
     ok, err = chain.add_block(blk)
     assert not ok
     assert "reutilizado" in err or "Commitment" in err or "aplicable" in err
@@ -118,8 +120,8 @@ def test_validate_chain_rejects_reused_existing_commitment_output():
         transactions=[tx1],
         coinbase_commitment=hash_hex("cb1"),
         coinbase_amount=config.block_reward,
+        coinbase_owner_secret_hash=owner_secret_hash("miner"),
     )
-    blk1.coinbase_owner_secret_hash = owner_secret_hash("miner")
     ok1, _ = chain.add_block(blk1, coinbase_owner="miner")
     assert ok1
     hijack_tx = PrivateTransaction(
@@ -151,8 +153,8 @@ def test_validate_chain_rejects_reused_existing_commitment_output():
         transactions=[hijack_tx],
         coinbase_commitment=hash_hex("cb2"),
         coinbase_amount=config.block_reward,
+        coinbase_owner_secret_hash=owner_secret_hash("miner"),
     )
-    blk2.coinbase_owner_secret_hash = owner_secret_hash("miner")
     ok2, _ = chain.add_block(blk2)
     assert not ok2
     chain.blocks.append(blk2)
@@ -201,8 +203,8 @@ def test_reorg_rejects_chain_with_reused_existing_commitment_output():
         transactions=[hijack_tx],
         coinbase_commitment=hash_hex("cb"),
         coinbase_amount=config.block_reward,
+        coinbase_owner_secret_hash=owner_secret_hash("miner"),
     )
-    blk.coinbase_owner_secret_hash = owner_secret_hash("miner")
     chain_alt.blocks.append(blk)
     for _ in range(2):
         build_and_mine_block(chain_alt, Mempool(), "miner")
@@ -227,8 +229,8 @@ def test_coinbase_cannot_reuse_existing_commitment():
         transactions=[tx1],
         coinbase_commitment=str(out_notes[0].commitment()),
         coinbase_amount=config.block_reward,
+        coinbase_owner_secret_hash=owner_secret_hash("miner"),
     )
-    blk.coinbase_owner_secret_hash = owner_secret_hash("miner")
     ok, err = chain.add_block(blk)
     assert not ok
     assert "reutilizado" in err or "Coinbase" in err
@@ -314,8 +316,8 @@ def test_block_cannot_contain_duplicate_output_commitments_across_transactions()
         transactions=[tx1, tx2],
         coinbase_commitment=hash_hex("cb"),
         coinbase_amount=config.block_reward,
+        coinbase_owner_secret_hash=owner_secret_hash("miner"),
     )
-    blk.coinbase_owner_secret_hash = owner_secret_hash("miner")
     ok, err = chain.add_block(blk)
     assert not ok
     assert "reutilizado" in err or "duplicado" in err or "aplicable" in err

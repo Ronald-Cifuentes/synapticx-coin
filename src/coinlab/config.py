@@ -1,7 +1,20 @@
 """Configuración del laboratorio MVP."""
 
+import json
 from dataclasses import dataclass
 from typing import Any, Dict
+
+from .crypto_primitives import hash_hex
+
+
+def chain_params_hash(config: "Config") -> str:
+    """
+    Hash determinístico de parámetros constitucionales.
+    Ancla la config al ledger; alterar config.json sin coincidir con genesis invalida la carga.
+    """
+    d = config.to_dict()
+    canonical = json.dumps(d, sort_keys=True)
+    return hash_hex(canonical)
 
 
 @dataclass(frozen=True)

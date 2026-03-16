@@ -2,15 +2,63 @@
 Transacciones privadas: consumen notas, revelan nullifiers, crean nuevos commitments.
 
 Conservación: sum(inputs desde estado) == sum(outputs) + fee. Input.amount/asset_id no son fuente de verdad.
+tx_id = H(payload canónico) para que alterar blocks.json invalide merkle/block_hash.
 """
 
-import secrets
+import json
 from dataclasses import dataclass
 from typing import List, Optional
 
-from .crypto_primitives import commitment_for_note, nullifier_for_note, owner_secret_hash
+from .crypto_primitives import hash_hex, nullifier_for_note, owner_secret_hash
 from .notes import Note, create_note
 from .types import CommitmentHash, TxId
+
+
+def _tx_canonical_payload(tx: "PrivateTransaction") -> str:
+    """
+    Serialización canónica determinística del payload de la tx.
+    Incluye todo lo que afecta validez y estado.
+    """
+    inp = [
+        {
+            "c": str(i.commitment),
+            "n": i.nullifier,
+            "a": i.amount,
+            "as": i.asset_id,
+            "s": i.secret,
+        }
+        for i in tx.inputs
+    ]
+    out = [
+        {
+            "c": str(o.commitment),
+            "a": o.amount,
+            "as": o.asset_id,
+            "o": o.owner_secret_hash,
+        }
+        for o in tx.outputs
+    ]
+    obj = {"fee": tx.fee, "inputs": inp, "outputs": out}
+    return json.dumps(obj, sort_keys=True)
+
+
+def tx_id_from_payload(tx: "PrivateTransaction") -> TxId:
+    """tx_id = H(payload canónico). Compromiso criptográfico del payload."""
+    return TxId(hash_hex(_tx_canonical_payload(tx)))
+
+
+def verify_tx_id(tx: "PrivateTransaction") -> tuple[bool, Optional[str]]:
+    """
+    Verifica que tx.tx_id coincida con H(payload).
+    Si no coincide: payload alterado o formato legacy (tx_id aleatorio).
+    """
+    expected = tx_id_from_payload(tx)
+    if tx.tx_id != expected:
+        return False, (
+            f"Tx payload alterado o formato legacy: tx_id no deriva del payload. "
+            f"Esperado {expected[:16]}..., actual {tx.tx_id[:16]}..."
+        )
+    return True, None
 
 
 @dataclass
@@ -110,13 +158,14 @@ def create_transfer_transaction(
         for n in output_notes
     ]
 
-    tx_id = tx_id or TxId(secrets.token_hex(16))
-    return PrivateTransaction(
-        tx_id=tx_id,
+    tx = PrivateTransaction(
+        tx_id=TxId(""),
         inputs=inputs,
         outputs=outputs,
         fee=fee,
     )
+    tx.tx_id = tx_id or tx_id_from_payload(tx)
+    return tx
 
 
 def create_transfer_with_output_notes(
@@ -162,8 +211,8 @@ def create_transfer_with_output_notes(
             )
         )
 
-    tx_id = tx_id or TxId(secrets.token_hex(16))
-    tx = PrivateTransaction(tx_id=tx_id, inputs=inputs, outputs=outputs, fee=fee)
+    tx = PrivateTransaction(tx_id=TxId(""), inputs=inputs, outputs=outputs, fee=fee)
+    tx.tx_id = tx_id or tx_id_from_payload(tx)
     return tx, output_notes
 
 

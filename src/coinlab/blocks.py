@@ -94,14 +94,24 @@ class Block:
     coinbase_commitment: str
     coinbase_amount: int
     coinbase_owner_secret_hash: str = ""  # hash(secret) para autorización de gasto
+    chain_params_hash: Optional[str] = None  # H(config) anclado en genesis; verifica integridad constitucional
 
     def block_hash(self) -> BlockHash:
-        """Hash del bloque (header)."""
+        """
+        Hash del bloque: compromiso criptográfico de todo lo que afecta validez y estado.
+        Incluye header + coinbase + chain_params para que alterar blocks.json invalide el hash.
+        """
+        cph = getattr(self, "chain_params_hash", None) or ""
+        owner = getattr(self, "coinbase_owner_secret_hash", "") or ""
         payload = (
             f"{self.header.prev_hash}|"
             f"{self.header.merkle_root}|"
             f"{self.header.timestamp}|"
             f"{self.header.nonce}|"
-            f"{self.header.difficulty}"
+            f"{self.header.difficulty}|"
+            f"{self.coinbase_commitment}|"
+            f"{self.coinbase_amount}|"
+            f"{owner}|"
+            f"{cph}"
         )
         return BlockHash(hash_hex(payload))

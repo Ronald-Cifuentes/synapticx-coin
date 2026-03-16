@@ -67,8 +67,8 @@ def test_linear_rejects_duplicate_nullifier_in_second_block():
         transactions=[tx1],
         coinbase_commitment=hash_hex("cb1"),
         coinbase_amount=config.block_reward,
+        coinbase_owner_secret_hash=owner_secret_hash("miner"),
     )
-    block1.coinbase_owner_secret_hash = owner_secret_hash("miner")
     ok1, _ = chain.add_block(block1, coinbase_owner="miner")
     assert ok1
     block2 = mine_block(
@@ -79,8 +79,8 @@ def test_linear_rejects_duplicate_nullifier_in_second_block():
         transactions=[tx2],
         coinbase_commitment=hash_hex("cb2"),
         coinbase_amount=config.block_reward,
+        coinbase_owner_secret_hash=owner_secret_hash("miner"),
     )
-    block2.coinbase_owner_secret_hash = owner_secret_hash("miner")
     ok2, err2 = chain.add_block(block2, coinbase_owner="miner")
     assert not ok2
     assert "Nullifier" in err2 or "nullifier" in err2.lower()

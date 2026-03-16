@@ -17,6 +17,7 @@ from coinlab.transactions import (
     TransactionInput,
     TransactionOutput,
     create_transfer_with_output_notes,
+    tx_id_from_payload,
 )
 from coinlab.types import CommitmentHash, TxId
 
@@ -195,8 +196,8 @@ def test_validate_chain_rejects_stolen_commitment_spend():
         transactions=[stolen_tx],
         coinbase_commitment=hash_hex("cb"),
         coinbase_amount=config.block_reward,
+        coinbase_owner_secret_hash=owner_secret_hash("miner"),
     )
-    blk.coinbase_owner_secret_hash = owner_secret_hash("miner")
     ok, err = chain.add_block(blk)
     assert not ok
     chain.blocks.append(blk)
@@ -211,7 +212,7 @@ def test_add_block_rejects_stolen_commitment_spend():
     block, faucet_note = chain.create_genesis("faucet")
     rec = chain.state.notes[str(faucet_note.commitment())]
     stolen_tx = PrivateTransaction(
-        tx_id=TxId("stolen"),
+        tx_id=TxId(""),
         inputs=[
             TransactionInput(
                 commitment=faucet_note.commitment(),
@@ -231,6 +232,7 @@ def test_add_block_rejects_stolen_commitment_spend():
         ],
         fee=0,
     )
+    stolen_tx.tx_id = tx_id_from_payload(stolen_tx)
     blk = mine_block(
         prev_hash=chain.tip_hash(),
         merkle_root=compute_merkle_root([stolen_tx]),
@@ -239,8 +241,8 @@ def test_add_block_rejects_stolen_commitment_spend():
         transactions=[stolen_tx],
         coinbase_commitment=hash_hex("cb"),
         coinbase_amount=config.block_reward,
+        coinbase_owner_secret_hash=owner_secret_hash("miner"),
     )
-    blk.coinbase_owner_secret_hash = owner_secret_hash("miner")
     ok, err = chain.add_block(blk)
     assert not ok
     assert "Secret" in err or "autorizado" in err.lower() or "Tx no aplicable" in err
@@ -256,7 +258,7 @@ def test_reorg_rejects_chain_with_stolen_commitment_spend():
     block, faucet_note = chain_alt.create_genesis("faucet")
     rec = chain_alt.state.notes[str(faucet_note.commitment())]
     stolen_tx = PrivateTransaction(
-        tx_id=TxId("stolen"),
+        tx_id=TxId(""),
         inputs=[
             TransactionInput(
                 commitment=faucet_note.commitment(),
@@ -276,6 +278,7 @@ def test_reorg_rejects_chain_with_stolen_commitment_spend():
         ],
         fee=0,
     )
+    stolen_tx.tx_id = tx_id_from_payload(stolen_tx)
     blk = mine_block(
         prev_hash=chain_alt.tip_hash(),
         merkle_root=compute_merkle_root([stolen_tx]),
@@ -284,8 +287,8 @@ def test_reorg_rejects_chain_with_stolen_commitment_spend():
         transactions=[stolen_tx],
         coinbase_commitment=hash_hex("cb"),
         coinbase_amount=config.block_reward,
+        coinbase_owner_secret_hash=owner_secret_hash("miner"),
     )
-    blk.coinbase_owner_secret_hash = owner_secret_hash("miner")
     chain_alt.blocks.append(blk)
     for _ in range(2):
         build_and_mine_block(chain_alt, Mempool(), "miner")

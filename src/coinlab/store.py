@@ -8,7 +8,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from .blocks import Block, BlockHeader
 from .chain import Blockchain, GENESIS_PREV
-from .config import Config
+from .config import Config, chain_params_hash
 from .notes import Note, deserialize_note, serialize_note
 from .transactions import (
     PrivateTransaction,
@@ -83,6 +83,7 @@ def _serialize_block(block: Block) -> Dict[str, Any]:
         "coinbase_commitment": block.coinbase_commitment,
         "coinbase_amount": block.coinbase_amount,
         "coinbase_owner_secret_hash": getattr(block, "coinbase_owner_secret_hash", "") or "",
+        "chain_params_hash": getattr(block, "chain_params_hash", None) or None,
     }
 
 
@@ -98,6 +99,7 @@ def _deserialize_block(d: Dict[str, Any]) -> Block:
         transactions=[_deserialize_tx(tx) for tx in d["transactions"]],
         coinbase_commitment=d["coinbase_commitment"],
         coinbase_amount=d["coinbase_amount"],
+        chain_params_hash=d.get("chain_params_hash") or None,
     )
     block.coinbase_owner_secret_hash = d.get("coinbase_owner_secret_hash", "")
     return block
@@ -154,28 +156,53 @@ class Store:
         data = json.loads(self.mempool_file.read_text())
         return [_deserialize_tx(d) for d in data]
 
+    def config_for_chain(self, blocks: List[Block]) -> Config:
+        """
+        Carga config y verifica contra genesis.chain_params_hash.
+        Falla si config.json fue alterada o formato legacy (sin hash en genesis).
+        La fuente de verdad constitucional está en el ledger (genesis), no en config.json.
+        """
+        if not blocks:
+            raise ValueError("config_for_chain requiere bloques")
+        genesis = blocks[0]
+        cph = getattr(genesis, "chain_params_hash", None)
+        if not cph:
+            raise RuntimeError(
+                "Formato legacy: genesis no tiene chain_params_hash. "
+                "Ejecute init-chain --force para resetear."
+            )
+        cfg = self.load_config()
+        if cfg is None:
+            raise RuntimeError(
+                "Config no persistida. Ejecute init-chain --force para resetear."
+            )
+        computed = chain_params_hash(cfg)
+        if computed != cph:
+            raise RuntimeError(
+                "Config alterada: hash no coincide con genesis. "
+                "La cadena fue creada con config distinta. Ejecute init-chain --force para resetear."
+            )
+        return cfg
+
     def config_compatible_with_blocks(
         self, config: Config, blocks: List[Block]
     ) -> Tuple[bool, Optional[str]]:
         """
         Verifica que config sea coherente con bloques persistidos.
-        Requiere config persistida cuando hay bloques (para default_asset_id).
+        Requiere genesis.chain_params_hash cuando hay bloques.
         Retorna (ok, error_message).
         """
         if not blocks:
             return True, None
-        stored = self.load_config()
-        if stored is None:
+        genesis = blocks[0]
+        cph = getattr(genesis, "chain_params_hash", None)
+        if not cph:
             return False, (
-                "Config no persistida; no se puede verificar compatibilidad. "
+                "Formato legacy: genesis no tiene chain_params_hash. "
                 "Ejecute init-chain --force para resetear."
             )
-        if config.difficulty != stored.difficulty:
-            return False, f"Config incoherente: difficulty={config.difficulty}, persistido={stored.difficulty}"
-        if config.block_reward != stored.block_reward:
-            return False, f"Config incoherente: block_reward={config.block_reward}, persistido={stored.block_reward}"
-        if config.default_asset_id != stored.default_asset_id:
-            return False, f"Config incoherente: default_asset_id={config.default_asset_id}, persistido={stored.default_asset_id}"
+        if chain_params_hash(config) != cph:
+            return False, "Config incoherente: hash no coincide con genesis"
         exp_diff = config.difficulty
         for i, block in enumerate(blocks):
             if block.header.difficulty != exp_diff:

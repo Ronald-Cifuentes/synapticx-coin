@@ -9,12 +9,14 @@
 - Nullifiers públicos para evitar doble gasto
 - Conservación de valor en agregado
 - Estado canónico reproducible
-- **Config persistida**: difficulty y block_reward se guardan con la cadena; recarga coherente al reiniciar
+- **Config anclada en ledger**: genesis.chain_params_hash = H(difficulty|block_reward|default_asset_id); alterar config.json invalida la carga
+- **Block hash autentica coinbase**: block_hash() incluye coinbase + chain_params; alterar blocks.json invalida prev_hash chain
+- **tx_id = H(payload)**: tx_id deriva del payload canónico; alterar inputs/outputs/fee invalida merkle_root y validación
 - **Validación fuerte**: autorización real (hash(secret)==owner_secret_hash); amount y asset relevantes se resuelven contra el estado (input no es fuente de verdad); commitment único no reutilizable; coinbase según política; difficulty fijada contra policy; merkle root recomputado
 - **Reorg por trabajo acumulado** (no solo longitud)
 - Mempool rechaza tx con inputs inexistentes y conflictos por nullifier
 - CLI: init-chain, create-wallet, mint-demo-notes, create-transfer, show-chain, show-state, show-utxo-equivalent, mine-block, run-demo, validate-chain
-- Tests automatizados (76 tests)
+- Tests automatizados (96 tests)
 - Simulaciones: supply correctness, mining distribution, double spend
 - Conformance: fixture válido + invalid-cases (input inexistente, reuse commitment, block header inválido)
 
@@ -113,7 +115,7 @@ src/coinlab/
   mempool.py            # Mempool
   miner.py              # build_and_mine_block
   cli.py                # Comandos CLI
-tests/                  # Suite de tests (76)
+tests/                  # Suite de tests (96)
 conformance/            # fixtures, invalid-cases
 simulations/            # supply, mining, double spend
 ```

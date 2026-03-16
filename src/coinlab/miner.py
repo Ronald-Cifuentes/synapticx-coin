@@ -31,6 +31,7 @@ def build_and_mine_block(
 
     coinbase_note = create_note(miner_address, cfg.block_reward, cfg.default_asset_id)
     coinbase_commitment = coinbase_note.commitment()
+    coinbase_owner_secret_hash = owner_secret_hash(coinbase_note.secret)
 
     merkle_root = compute_merkle_root(txs)
 
@@ -42,9 +43,8 @@ def build_and_mine_block(
         transactions=txs,
         coinbase_commitment=coinbase_commitment,
         coinbase_amount=cfg.block_reward,
+        coinbase_owner_secret_hash=coinbase_owner_secret_hash,
     )
-
-    block.coinbase_owner_secret_hash = owner_secret_hash(coinbase_note.secret)
     ok, err = chain.add_block(block, coinbase_owner=miner_address)
     if not ok:
         raise RuntimeError(f"Block rechazado: {err}")

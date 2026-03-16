@@ -13,11 +13,11 @@ from .blocks import (
     expected_block_difficulty,
     expected_block_reward,
 )
-from .config import Config
+from .config import Config, chain_params_hash
 from .crypto_primitives import hash_hex, owner_secret_hash
 from .pow import cumulative_work, mine_block, validate_block_pow
 from .state import ChainState
-from .transactions import PrivateTransaction, validate_transaction_basic
+from .transactions import PrivateTransaction, validate_transaction_basic, verify_tx_id
 from .types import BlockHash
 
 
@@ -55,6 +55,9 @@ def validate_block(
     if has_dup:
         return False, err or "Commitment duplicado en bloque"
     for tx in block.transactions:
+        ok, err = verify_tx_id(tx)
+        if not ok:
+            return False, f"Tx payload alterado o formato legacy: {err}"
         ok, err = validate_transaction_basic(tx)
         if not ok:
             return False, f"Tx estructural inválida: {err}"
@@ -89,8 +92,9 @@ class Blockchain:
             transactions=[],
             coinbase_commitment=coinbase_commitment,
             coinbase_amount=self.config.block_reward,
+            coinbase_owner_secret_hash=owner_secret_hash(faucet_note.secret),
+            chain_params_hash=chain_params_hash(self.config),
         )
-        block.coinbase_owner_secret_hash = owner_secret_hash(faucet_note.secret)
         ok, err = self.add_block(block, coinbase_owner=faucet_address)
         if not ok:
             raise RuntimeError(f"Genesis falló: {err}")

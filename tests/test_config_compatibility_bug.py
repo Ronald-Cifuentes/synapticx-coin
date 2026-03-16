@@ -51,7 +51,7 @@ def test_FIX_reject_config_override_with_different_default_asset_id(tmp_path: Pa
 
 
 def test_FIX_config_compatible_rejects_block_reward_mismatch(tmp_path: Path):
-    """config_compatible rechaza block_reward distinto al persistido."""
+    """config_compatible rechaza config con block_reward distinto (hash no coincide)."""
     store = Store(tmp_path)
     config_orig = Config(difficulty=2, block_reward=100)
     chain = Blockchain(config_orig)
@@ -61,11 +61,11 @@ def test_FIX_config_compatible_rejects_block_reward_mismatch(tmp_path: Path):
     config_wrong = Config(difficulty=2, block_reward=999)
     ok, err = store.config_compatible_with_blocks(config_wrong, store.load_blocks())
     assert not ok
-    assert "block_reward" in err.lower()
+    assert "incoherente" in err.lower() or "hash" in err.lower() or "genesis" in err.lower()
 
 
 def test_FIX_config_compatible_rejects_default_asset_id_mismatch(tmp_path: Path):
-    """config_compatible rechaza default_asset_id distinto al persistido."""
+    """config_compatible rechaza config con default_asset_id distinto (hash no coincide)."""
     store = Store(tmp_path)
     config_orig = Config(difficulty=2, default_asset_id="BASE")
     chain = Blockchain(config_orig)
@@ -75,7 +75,7 @@ def test_FIX_config_compatible_rejects_default_asset_id_mismatch(tmp_path: Path)
     config_wrong = Config(difficulty=2, default_asset_id="FAKE")
     ok, err = store.config_compatible_with_blocks(config_wrong, store.load_blocks())
     assert not ok
-    assert "default_asset_id" in err.lower() or "asset" in err.lower()
+    assert "incoherente" in err.lower() or "hash" in err.lower() or "genesis" in err.lower()
 
 
 def test_FIX_reload_with_identical_config_succeeds(tmp_path: Path):
