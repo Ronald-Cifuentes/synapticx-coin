@@ -1,7 +1,7 @@
 """
 Transacciones privadas: consumen notas, revelan nullifiers, crean nuevos commitments.
 
-Conservación: sum(inputs) == sum(outputs) + fee
+Conservación: sum(inputs desde estado) == sum(outputs) + fee. Input.amount/asset_id no son fuente de verdad.
 """
 
 import secrets

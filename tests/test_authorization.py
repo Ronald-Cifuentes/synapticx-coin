@@ -22,7 +22,7 @@ from coinlab.types import CommitmentHash, TxId
 
 
 def test_existing_commitment_cannot_be_spent_with_attacker_secret():
-    """Exploit: commitment real + secret arbitrario + nullifier coherente. Rechazado."""
+    """Commitment real + secret arbitrario + nullifier coherente: rechazado por autorización."""
     config = Config(difficulty=2)
     chain = Blockchain(config)
     block, faucet_note = chain.create_genesis("faucet")
@@ -56,7 +56,7 @@ def test_existing_commitment_cannot_be_spent_with_attacker_secret():
 
 
 def test_existing_commitment_cannot_be_stolen_even_with_real_amount():
-    """Exploit: commitment real, amount real del estado, secret falso. Rechazado."""
+    """Commitment real, amount del estado, secret falso: rechazado por autorización."""
     config = Config(difficulty=2)
     chain = Blockchain(config)
     block, faucet_note = chain.create_genesis("faucet")

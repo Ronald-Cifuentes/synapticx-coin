@@ -25,7 +25,7 @@ class Mempool:
     ) -> tuple[bool, Optional[str]]:
         """
         Ruta SEGURA: valida tx contra estado canónico.
-        Usa can_apply_transaction (witness, amount, nullifier derivado).
+        Usa can_apply_transaction: autorización, amount/asset desde estado, nullifier derivado.
         """
         ok, err = validate_transaction_basic(tx)
         if not ok:
