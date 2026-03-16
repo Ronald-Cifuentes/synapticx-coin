@@ -1,3 +1,9 @@
-# Provider Correlation — No implementado aún
+# Provider Correlation
 
-Simulación de qué puede inferir un proveedor adversario (light client, red) no está implementada.
+Simulador de inferencia de origen (network metadata privacy).
+
+```bash
+python simulations/provider-correlation/run_correlation_simulator.py
+```
+
+Mide: origin_inference_rate con gossip plano vs relay staging. Modelo simplificado (grafo en anillo).

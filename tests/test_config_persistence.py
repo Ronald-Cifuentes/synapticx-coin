@@ -31,14 +31,15 @@ def test_config_compatible_with_blocks_empty(tmp_path: Path):
 
 
 def test_config_incompatible_with_blocks_fails(tmp_path: Path):
-    """Config con difficulty distinta a bloques falla."""
+    """Config con difficulty distinta a persistida falla."""
     config = Config(difficulty=2)
     chain = Blockchain(config)
     chain.create_genesis("faucet")
-    blocks = chain.blocks
-    wrong_config = Config(difficulty=4)
     store = Store(tmp_path)
-    ok, err = store.config_compatible_with_blocks(wrong_config, blocks)
+    store.save_config(config)
+    store.save_blocks(chain.blocks)
+    wrong_config = Config(difficulty=4)
+    ok, err = store.config_compatible_with_blocks(wrong_config, store.load_blocks())
     assert not ok
     assert "incoherente" in err or "difficulty" in err.lower()
 

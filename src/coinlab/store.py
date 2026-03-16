@@ -159,15 +159,33 @@ class Store:
     ) -> Tuple[bool, Optional[str]]:
         """
         Verifica que config sea coherente con bloques persistidos.
+        Requiere config persistida cuando hay bloques (para default_asset_id).
         Retorna (ok, error_message).
         """
         if not blocks:
             return True, None
+        stored = self.load_config()
+        if stored is None:
+            return False, (
+                "Config no persistida; no se puede verificar compatibilidad. "
+                "Ejecute init-chain --force para resetear."
+            )
+        if config.difficulty != stored.difficulty:
+            return False, f"Config incoherente: difficulty={config.difficulty}, persistido={stored.difficulty}"
+        if config.block_reward != stored.block_reward:
+            return False, f"Config incoherente: block_reward={config.block_reward}, persistido={stored.block_reward}"
+        if config.default_asset_id != stored.default_asset_id:
+            return False, f"Config incoherente: default_asset_id={config.default_asset_id}, persistido={stored.default_asset_id}"
         exp_diff = config.difficulty
         for i, block in enumerate(blocks):
             if block.header.difficulty != exp_diff:
                 return False, (
                     f"Config incoherente con bloque {i}: "
                     f"header.difficulty={block.header.difficulty}, config.difficulty={exp_diff}"
+                )
+            if block.coinbase_amount != config.block_reward:
+                return False, (
+                    f"Config incoherente con bloque {i}: "
+                    f"coinbase_amount={block.coinbase_amount}, config.block_reward={config.block_reward}"
                 )
         return True, None

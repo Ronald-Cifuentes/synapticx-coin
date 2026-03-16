@@ -4,6 +4,8 @@
 
 Cada lab investiga un bloqueante o hipótesis. **No** contiene implementación de protocolo final. Contiene prototipos, experimentos y harnesses para validar viabilidad.
 
+**Rebaja epistemológica:** Simulador ≠ solución. Harness ≠ prototipo de protocolo. Target metric ≠ métrica medida. Hipótesis ≠ evidencia. Los resultados de los simuladores informan diseño, no cierran bloqueantes.
+
 ## Labs
 
 | Lab | Bloqueante/Hipótesis | Test plan |
@@ -29,4 +31,13 @@ Cada lab investiga un bloqueante o hipótesis. **No** contiene implementación d
 
 ## Estado
 
-Los labs están vacíos o con stubs. **No hay implementación de protocolo.** El código que se añada debe ser scaffold o harness para validar hipótesis. Código que parezca mainnet-ready antes de cerrar bloqueantes es engañoso.
+Cada lab tiene:
+- Hipótesis explícita
+- Simulador o harness ejecutable (ver README de cada lab)
+- Métricas y umbrales (TP-001 a TP-006)
+- Kill criteria y downgrade paths
+
+Simuladores en `simulations/` (harnesses, no prototipos de protocolo):
+- `light-client-leakage/` — correlación por patrón de consulta
+- `provider-correlation/` — inferencia de origen (gossip vs relay)
+- `dag-ordering/` — conflicto de nullifier (harness para DAG futuro)

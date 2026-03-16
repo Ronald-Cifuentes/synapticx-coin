@@ -34,13 +34,26 @@ def _get_store(data_dir: Path) -> Store:
 
 
 def _load_chain(store: Store, config: Optional[Config] = None) -> Blockchain:
-    """Carga cadena desde store. Usa config persistida si no se pasa una."""
+    """Carga cadena desde store. Con bloques existentes, usa SOLO config persistida (no override)."""
     blocks = store.load_blocks()
     if not blocks:
         cfg = config or Config.default()
         return Blockchain(cfg)
     stored_config = store.load_config()
-    cfg = config or stored_config or Config.default()
+    if stored_config is None:
+        raise RuntimeError(
+            "Config no persistida. No se puede verificar compatibilidad. "
+            "Ejecute init-chain --force para resetear."
+        )
+    cfg = stored_config
+    if config is not None and (
+        config.difficulty != stored_config.difficulty
+        or config.block_reward != stored_config.block_reward
+        or config.default_asset_id != stored_config.default_asset_id
+    ):
+        raise RuntimeError(
+            f"Config pasada difiere de persistida: use la config de la cadena o init-chain --force"
+        )
     ok, err = store.config_compatible_with_blocks(cfg, blocks)
     if not ok:
         raise RuntimeError(f"Config incoherente con bloques: {err}")

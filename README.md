@@ -14,7 +14,7 @@
 - **Reorg por trabajo acumulado** (no solo longitud)
 - Mempool rechaza tx con inputs inexistentes y conflictos por nullifier
 - CLI: init-chain, create-wallet, mint-demo-notes, create-transfer, show-chain, show-state, show-utxo-equivalent, mine-block, run-demo, validate-chain
-- Tests automatizados (68 tests)
+- Tests automatizados (76 tests)
 - Simulaciones: supply correctness, mining distribution, double spend
 - Conformance: fixture válido + invalid-cases (input inexistente, reuse commitment, block header inválido)
 
@@ -31,9 +31,9 @@
 
 **Fees quemadas.** El fee de una tx se consume en la ecuación de conservación (in = out + fee). El minero recibe solo `block_reward`; las fees no van al coinbase. Esto es deliberado en el MVP.
 
-## Wallet local
+## Wallet local — ESTADO PARCIAL
 
-**wallets.json es cache de demo, NO fuente canónica.** La fuente de verdad es la cadena (blocks.json) y el estado derivado. El archivo wallets.json es un helper para el flujo CLI que mantiene notas por owner; puede desincronizarse si se edita manualmente. No hay reconcile/rescan automático.
+**wallets.json es cache de demo, NO fuente canónica.** La fuente de verdad es la cadena (blocks.json) y el estado derivado. El archivo wallets.json es un helper para el flujo CLI que mantiene notas por owner; puede desincronizarse si se edita manualmente o si la cadena cambia externamente. **No hay reconcile ni rescan.** Si wallets.json se desincroniza, no se corrige automáticamente. Para flujos fiables use la cadena y el estado derivado.
 
 ## Limitaciones honestas
 
@@ -49,16 +49,18 @@
 
 ## Cómo ejecutar
 
+**Requisitos:** Python ≥3.10, ejecutar desde la raíz del repo. Instalación previa obligatoria.
+
 ```bash
-# Instalar
+# Desde raíz del repo (cd /path/to/coin)
 pip install -e ".[dev]"
 
-# Tests
+# Tests (reproducible en limpio)
 pytest tests/ -v
 # o
 ./scripts/run_tests.sh
 
-# Demo completa
+# Demo completa (reproducible en limpio)
 python -m coinlab.cli run-demo
 # o
 ./scripts/run_demo.sh
@@ -83,6 +85,18 @@ python simulations/mining-centralization/run_basic_mining_distribution.py
 python simulations/double-spend/run_double_spend_test.py
 ```
 
+## Simuladores de investigación (bloqueantes abiertos)
+
+```bash
+./scripts/run_research_simulations.sh
+# o individualmente:
+python simulations/light-client-leakage/run_leakage_simulator.py
+python simulations/provider-correlation/run_correlation_simulator.py
+python simulations/dag-ordering/run_nullifier_conflict_simulator.py
+```
+
+Cada uno tiene hipótesis, métricas y kill criteria. Ver `research/*/README.md`.
+
 ## Estructura
 
 ```
@@ -99,7 +113,7 @@ src/coinlab/
   mempool.py            # Mempool
   miner.py              # build_and_mine_block
   cli.py                # Comandos CLI
-tests/                  # Suite de tests (68)
+tests/                  # Suite de tests (76)
 conformance/            # fixtures, invalid-cases
 simulations/            # supply, mining, double spend
 ```
