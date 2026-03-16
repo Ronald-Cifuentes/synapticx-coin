@@ -49,7 +49,7 @@ def main():
         TransactionInput,
         TransactionOutput,
     )
-    from coinlab.crypto_primitives import hash_hex
+    from coinlab.crypto_primitives import hash_hex, owner_secret_hash
     from coinlab.types import CommitmentHash, TxId
 
     fake_tx = PrivateTransaction(
@@ -68,6 +68,7 @@ def main():
                 commitment=CommitmentHash(hash_hex("out_fake")),
                 amount=50,
                 asset_id="BASE",
+                owner_secret_hash=owner_secret_hash(""),
             )
         ],
         fee=0,

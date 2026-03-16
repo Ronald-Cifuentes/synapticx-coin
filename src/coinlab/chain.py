@@ -13,7 +13,7 @@ from .blocks import (
     expected_block_reward,
 )
 from .config import Config
-from .crypto_primitives import hash_hex
+from .crypto_primitives import hash_hex, owner_secret_hash
 from .pow import cumulative_work, mine_block, validate_block_pow
 from .state import ChainState
 from .transactions import PrivateTransaction, validate_transaction_basic
@@ -84,6 +84,7 @@ class Blockchain:
             coinbase_commitment=coinbase_commitment,
             coinbase_amount=self.config.block_reward,
         )
+        block.coinbase_owner_secret_hash = owner_secret_hash(faucet_note.secret)
         ok, err = self.add_block(block, coinbase_owner=faucet_address)
         if not ok:
             raise RuntimeError(f"Genesis falló: {err}")
@@ -125,6 +126,7 @@ class Blockchain:
             owner=coinbase_owner,
             amount=block.coinbase_amount,
             asset_id=self.config.default_asset_id,
+            owner_secret_hash_val=block.coinbase_owner_secret_hash or None,
         )
 
         self.state = temp_state
@@ -153,6 +155,7 @@ class Blockchain:
                 block.coinbase_commitment,
                 amount=block.coinbase_amount,
                 asset_id=self.config.default_asset_id,
+                owner_secret_hash_val=block.coinbase_owner_secret_hash or None,
             )
         return True, None
 
@@ -184,6 +187,7 @@ class Blockchain:
                 block.coinbase_commitment,
                 amount=block.coinbase_amount,
                 asset_id=self.config.default_asset_id,
+                owner_secret_hash_val=block.coinbase_owner_secret_hash or None,
             )
             prev_hash = block.block_hash()
         self.blocks = blocks

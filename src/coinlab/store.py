@@ -36,6 +36,7 @@ def _serialize_tx(tx: PrivateTransaction) -> Dict[str, Any]:
                 "commitment": o.commitment,
                 "amount": o.amount,
                 "asset_id": o.asset_id,
+                "owner_secret_hash": getattr(o, "owner_secret_hash", "") or "",
             }
             for o in tx.outputs
         ],
@@ -61,6 +62,7 @@ def _deserialize_tx(d: Dict[str, Any]) -> PrivateTransaction:
                 commitment=CommitmentHash(o["commitment"]),
                 amount=o["amount"],
                 asset_id=o["asset_id"],
+                owner_secret_hash=o.get("owner_secret_hash", "") or "",
             )
             for o in d["outputs"]
         ],
@@ -80,11 +82,12 @@ def _serialize_block(block: Block) -> Dict[str, Any]:
         "transactions": [_serialize_tx(tx) for tx in block.transactions],
         "coinbase_commitment": block.coinbase_commitment,
         "coinbase_amount": block.coinbase_amount,
+        "coinbase_owner_secret_hash": getattr(block, "coinbase_owner_secret_hash", "") or "",
     }
 
 
 def _deserialize_block(d: Dict[str, Any]) -> Block:
-    return Block(
+    block = Block(
         header=BlockHeader(
             prev_hash=d["header"]["prev_hash"],
             merkle_root=d["header"]["merkle_root"],
@@ -96,6 +99,8 @@ def _deserialize_block(d: Dict[str, Any]) -> Block:
         coinbase_commitment=d["coinbase_commitment"],
         coinbase_amount=d["coinbase_amount"],
     )
+    block.coinbase_owner_secret_hash = d.get("coinbase_owner_secret_hash", "")
+    return block
 
 
 class Store:

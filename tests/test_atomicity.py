@@ -7,7 +7,7 @@ import pytest
 from coinlab.blocks import Block, BlockHeader, compute_merkle_root
 from coinlab.chain import Blockchain, validate_block
 from coinlab.config import Config
-from coinlab.crypto_primitives import hash_hex
+from coinlab.crypto_primitives import hash_hex, owner_secret_hash
 from coinlab.mempool import Mempool
 from coinlab.notes import create_note
 from coinlab.pow import mine_block
@@ -50,6 +50,7 @@ def test_add_block_is_atomic_on_failure():
                 commitment=CommitmentHash(hash_hex("out")),
                 amount=60,
                 asset_id="BASE",
+                owner_secret_hash=owner_secret_hash(""),
             )
         ],
         fee=0,
@@ -103,6 +104,7 @@ def test_reorg_rejects_unbalanced_transaction_chain():
                 commitment=CommitmentHash(hash_hex("y")),
                 amount=150,
                 asset_id="BASE",
+                owner_secret_hash=owner_secret_hash(""),
             )
         ],
         fee=0,
@@ -159,6 +161,7 @@ def test_reorg_is_atomic_on_failure():
                 commitment=CommitmentHash(hash_hex("o")),
                 amount=50,
                 asset_id="BASE",
+                owner_secret_hash=owner_secret_hash(""),
             )
         ],
         fee=0,
@@ -203,6 +206,7 @@ def test_validate_block_rejects_internal_nullifier_conflict():
                 commitment=CommitmentHash(hash_hex("other")),
                 amount=50,
                 asset_id="BASE",
+                owner_secret_hash=owner_secret_hash(""),
             )
         ],
         fee=0,
@@ -242,6 +246,7 @@ def test_mempool_safe_path_rejects_nonexistent_input_without_optional_magic():
                 commitment=CommitmentHash(hash_hex("o")),
                 amount=50,
                 asset_id="BASE",
+                owner_secret_hash=owner_secret_hash(""),
             )
         ],
         fee=0,

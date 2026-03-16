@@ -1,15 +1,25 @@
 """
-Estado canónico: notas (commitment->amount,asset), nullifiers usados.
+Estado canónico: notas con NoteRecord (amount, asset_id, owner_secret_hash), nullifiers usados.
 
-Cada nota almacenada tiene amount y asset_id para validar gastos.
+Cada nota almacenada permite verificar autorización real: hash(secret) == owner_secret_hash.
 El estado NO tiene balances por cuenta en cadena (privacidad).
 Índice auxiliar solo para demos/tests.
 """
 
+from dataclasses import dataclass
 from typing import Dict, List, Optional, Set, Tuple
 
-from .crypto_primitives import nullifier_for_note
+from .crypto_primitives import nullifier_for_note, owner_secret_hash
 from .transactions import PrivateTransaction
+
+
+@dataclass
+class NoteRecord:
+    """Registro persistido de nota. Fuente de verdad para gasto."""
+
+    amount: int
+    asset_id: str
+    owner_secret_hash: str
 
 
 def tx_inputs_exist_in_state(
@@ -29,13 +39,13 @@ def tx_inputs_exist_in_state(
 
 class ChainState:
     """
-    Estado de la cadena: notas (commitment->amount,asset), nullifiers gastados.
-    notes permite validar amount y asset_id real al gastar.
+    Estado de la cadena: notas con NoteRecord (amount, asset_id, owner_secret_hash).
+    Valida autorización real: hash(secret) == owner_secret_hash.
     Índice owner->amount solo para demos; no es parte del protocolo.
     """
 
     commitments: Set[str]
-    notes: Dict[str, Tuple[int, str]]  # commitment -> (amount, asset_id)
+    notes: Dict[str, NoteRecord]  # commitment -> NoteRecord
     nullifiers_used: Set[str]
     _owner_index: Dict[str, int]
 
@@ -55,11 +65,12 @@ class ChainState:
         self,
         tx: PrivateTransaction,
         known_commitments: Optional[Set[str]] = None,
-        known_notes: Optional[Dict[str, Tuple[int, str]]] = None,
+        known_notes: Optional[Dict[str, NoteRecord]] = None,
     ) -> tuple[bool, Optional[str]]:
         """
         Verifica si la tx puede aplicarse.
-        Valida: commitment existe, amount/asset coinciden con nota, nullifier derivado correctamente.
+        Valida: commitment existe, autorización real (hash(secret)==owner_secret_hash),
+        nullifier derivado, amount/asset desde estado para conservation.
         """
         notes = known_notes if known_notes is not None else self.notes
         available = known_commitments if known_commitments is not None else self.commitments
@@ -68,20 +79,34 @@ class ChainState:
             if self.has_nullifier_used(nf):
                 return False, f"Nullifier ya usado: {nf[:16]}..."
 
+        total_in_from_state = 0
+        asset_from_state: Optional[str] = None
+
         for inp in tx.inputs:
             comm = inp.commitment if isinstance(inp.commitment, str) else str(inp.commitment)
             if comm not in available:
                 return False, f"Input commitment inexistente: {comm[:16]}..."
             if comm not in notes:
-                return False, f"Nota sin amount/asset para commitment: {comm[:16]}..."
-            stored_amount, stored_asset = notes[comm]
-            if inp.amount != stored_amount:
-                return False, f"Amount falsificado: declarado={inp.amount}, real={stored_amount}"
-            if inp.asset_id != stored_asset:
-                return False, f"Asset falsificado: {inp.asset_id} != {stored_asset}"
+                return False, f"Nota sin registro para commitment: {comm[:16]}..."
+            rec = notes[comm]
+            if owner_secret_hash(inp.secret) != rec.owner_secret_hash:
+                return False, f"Secret no autorizado: commitment ajeno no puede gastarse con secret arbitrario"
             expected_nf = nullifier_for_note(inp.secret, comm)
             if inp.nullifier != expected_nf:
                 return False, f"Nullifier no deriva de witness: {inp.nullifier[:16]}..."
+            total_in_from_state += rec.amount
+            if asset_from_state is None:
+                asset_from_state = rec.asset_id
+            elif asset_from_state != rec.asset_id:
+                return False, "Asset mezclado en inputs"
+
+        total_out_plus_fee = sum(o.amount for o in tx.outputs) + tx.fee
+        if total_in_from_state != total_out_plus_fee:
+            return False, f"Desbalance: in={total_in_from_state} (desde estado), out+fee={total_out_plus_fee}"
+
+        for out in tx.outputs:
+            if asset_from_state is not None and out.asset_id != asset_from_state:
+                return False, f"Asset falsificado en output: {out.asset_id} != {asset_from_state}"
 
         return True, None
 
@@ -103,7 +128,11 @@ class ChainState:
         for out in tx.outputs:
             c = out.commitment if isinstance(out.commitment, str) else str(out.commitment)
             self.commitments.add(c)
-            self.notes[c] = (out.amount, out.asset_id)
+            self.notes[c] = NoteRecord(
+                amount=out.amount,
+                asset_id=out.asset_id,
+                owner_secret_hash=out.owner_secret_hash,
+            )
 
         if output_owners is not None and len(output_owners) == len(tx.outputs):
             for owner, out in zip(output_owners, tx.outputs):
@@ -115,10 +144,15 @@ class ChainState:
         owner: Optional[str] = None,
         amount: int = 0,
         asset_id: str = "BASE",
+        owner_secret_hash_val: Optional[str] = None,
     ) -> None:
-        """Añade un commitment (ej. coinbase) con amount y asset_id."""
+        """Añade un commitment (ej. coinbase) con NoteRecord completo."""
         self.commitments.add(comm)
-        self.notes[comm] = (amount, asset_id)
+        self.notes[comm] = NoteRecord(
+            amount=amount,
+            asset_id=asset_id,
+            owner_secret_hash=owner_secret_hash_val or owner_secret_hash(""),
+        )
         if owner is not None:
             self._owner_index[owner] = self._owner_index.get(owner, 0) + amount
 
@@ -130,7 +164,7 @@ class ChainState:
         """Copia profunda del estado. Para staged application atómica."""
         other = ChainState()
         other.commitments = self.commitments.copy()
-        other.notes = self.notes.copy()
+        other.notes = {k: NoteRecord(v.amount, v.asset_id, v.owner_secret_hash) for k, v in self.notes.items()}
         other.nullifiers_used = self.nullifiers_used.copy()
         other._owner_index = self._owner_index.copy()
         return other

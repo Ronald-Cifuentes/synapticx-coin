@@ -8,7 +8,7 @@ import secrets
 from dataclasses import dataclass
 from typing import List, Optional
 
-from .crypto_primitives import commitment_for_note, nullifier_for_note
+from .crypto_primitives import commitment_for_note, nullifier_for_note, owner_secret_hash
 from .notes import Note, create_note
 from .types import CommitmentHash, TxId
 
@@ -28,11 +28,15 @@ class TransactionInput:
 
 @dataclass
 class TransactionOutput:
-    """Output: nuevo commitment de nota creada."""
+    """Output: nuevo commitment de nota creada.
+    owner_secret_hash: obligatorio para que el output sea gastable.
+    amount/asset_id: metadata; la verdad para gasto sale del NoteRecord en estado.
+    """
 
     commitment: CommitmentHash
     amount: int
     asset_id: str
+    owner_secret_hash: str  # hash(secret) del receptor; obligatorio para autorización
 
 
 @dataclass
@@ -92,20 +96,19 @@ def create_transfer_transaction(
             )
         )
 
-    outputs: List[TransactionOutput] = []
-    for amount, owner in zip(output_amounts, output_owners):
-        # Crear nota efímera para commitment; el receptor la reconstruirá
-        nonce = secrets.token_hex(16)
-        comm = CommitmentHash(
-            commitment_for_note(owner, amount, nonce, input_notes[0].asset_id)
+    output_notes = [
+        create_note(owner, amount, input_notes[0].asset_id)
+        for owner, amount in zip(output_owners, output_amounts)
+    ]
+    outputs = [
+        TransactionOutput(
+            commitment=n.commitment(),
+            amount=n.amount,
+            asset_id=n.asset_id,
+            owner_secret_hash=owner_secret_hash(n.secret),
         )
-        outputs.append(
-            TransactionOutput(
-                commitment=comm,
-                amount=amount,
-                asset_id=input_notes[0].asset_id,
-            )
-        )
+        for n in output_notes
+    ]
 
     tx_id = tx_id or TxId(secrets.token_hex(16))
     return PrivateTransaction(
@@ -136,6 +139,7 @@ def create_transfer_with_output_notes(
             commitment=n.commitment(),
             amount=n.amount,
             asset_id=n.asset_id,
+            owner_secret_hash=owner_secret_hash(n.secret),
         )
         for n in output_notes
     ]
@@ -165,19 +169,21 @@ def create_transfer_with_output_notes(
 
 def validate_transaction_basic(tx: PrivateTransaction) -> tuple[bool, Optional[str]]:
     """
-    Valida transacción básica: conservación de valor.
-    Retorna (ok, error_message).
+    Valida transacción estructural: presencia, cardinalidad, fee, formato.
+    NO valida propiedad ni amount/asset real (eso depende del estado).
     """
-    total_in = tx.input_amount()
-    total_out = tx.output_amount() + tx.fee
-    if total_in != total_out:
-        return False, f"Desbalance: in={total_in}, out+fee={total_out}"
-
     if not tx.inputs:
         return False, "Sin inputs"
 
     if not tx.outputs:
         return False, "Sin outputs"
+
+    if tx.fee < 0:
+        return False, "Fee negativa"
+
+    total_out = tx.output_amount() + tx.fee
+    if total_out < 0:
+        return False, "Outputs+fee inválido"
 
     asset = tx.inputs[0].asset_id
     for i in tx.inputs:

@@ -7,7 +7,7 @@ import pytest
 from coinlab.blocks import Block, BlockHeader, compute_merkle_root
 from coinlab.chain import Blockchain, validate_block
 from coinlab.config import Config
-from coinlab.crypto_primitives import hash_hex
+from coinlab.crypto_primitives import hash_hex, owner_secret_hash
 from coinlab.mempool import Mempool
 from coinlab.notes import create_note
 from coinlab.pow import block_work, cumulative_work, mine_block
@@ -38,6 +38,7 @@ def test_tx_with_nonexistent_input_commitment_fails():
         commitment=CommitmentHash(hash_hex("real_out")),
         amount=50,
         asset_id="BASE",
+        owner_secret_hash=owner_secret_hash(""),
     )
     tx = PrivateTransaction(
         tx_id=TxId("fake_tx_1"),
@@ -139,6 +140,7 @@ def test_validate_chain_rejects_hidden_monetary_invalidity():
                 commitment=CommitmentHash(hash_hex("out1")),
                 amount=50,
                 asset_id="BASE",
+                owner_secret_hash=owner_secret_hash(""),
             )
         ],
         fee=0,
@@ -179,6 +181,7 @@ def test_mempool_rejects_nonexistent_input_tx():
                 commitment=CommitmentHash(hash_hex("o")),
                 amount=50,
                 asset_id="BASE",
+                owner_secret_hash=owner_secret_hash(""),
             )
         ],
         fee=0,

@@ -71,8 +71,9 @@ class Block:
 
     header: BlockHeader
     transactions: List[PrivateTransaction]
-    coinbase_commitment: str  # Commitment de recompensa al minero
+    coinbase_commitment: str
     coinbase_amount: int
+    coinbase_owner_secret_hash: str = ""  # hash(secret) para autorización de gasto
 
     def block_hash(self) -> BlockHash:
         """Hash del bloque (header)."""

@@ -22,6 +22,11 @@ def hash_hex(data: str) -> str:
     return hashlib.sha256(data.encode()).hexdigest()
 
 
+def owner_secret_hash(secret: str) -> str:
+    """Hash del secret para verificar autorización de gasto."""
+    return hash_hex(secret)
+
+
 def commitment_for_note(
     owner_key: str,
     amount: int,

@@ -7,7 +7,7 @@ import pytest
 from coinlab.blocks import compute_merkle_root, expected_block_difficulty
 from coinlab.chain import Blockchain, validate_block
 from coinlab.config import Config
-from coinlab.crypto_primitives import hash_hex
+from coinlab.crypto_primitives import hash_hex, owner_secret_hash
 from coinlab.notes import create_note
 from coinlab.pow import block_work, cumulative_work, mine_block
 from coinlab.transactions import (
@@ -41,13 +41,14 @@ def test_forged_input_amount_on_existing_commitment_fails():
                 commitment=CommitmentHash(hash_hex("out")),
                 amount=1000,
                 asset_id="BASE",
+                owner_secret_hash=owner_secret_hash(""),
             )
         ],
         fee=0,
     )
     ok, err = chain.state.can_apply_transaction(tx)
     assert not ok
-    assert "Amount falsificado" in err or "falsificado" in err.lower()
+    assert "Amount" in err or "falsificado" in err.lower() or "Desbalance" in err
 
 
 def test_forged_nullifier_for_existing_commitment_fails():
@@ -72,13 +73,14 @@ def test_forged_nullifier_for_existing_commitment_fails():
                 commitment=CommitmentHash(hash_hex("out")),
                 amount=100,
                 asset_id="BASE",
+                owner_secret_hash=owner_secret_hash(""),
             )
         ],
         fee=0,
     )
     ok, err = chain.state.can_apply_transaction(tx)
     assert not ok
-    assert "Nullifier" in err or "deriva" in err.lower()
+    assert "Nullifier" in err or "deriva" in err.lower() or "Secret no autorizado" in err
 
 
 def test_spend_requires_valid_note_witness():
@@ -89,18 +91,17 @@ def test_spend_requires_valid_note_witness():
     tx, out_notes = create_transfer_with_output_notes(
         [faucet_note], [50, 50], ["alice", "bob"], fee=0
     )
-    chain.add_block(
-        mine_block(
-            prev_hash=chain.tip_hash(),
-            merkle_root=compute_merkle_root([tx]),
-            timestamp=1,
-            difficulty=config.difficulty,
-            transactions=[tx],
-            coinbase_commitment=hash_hex("cb"),
-            coinbase_amount=config.block_reward,
-        ),
-        coinbase_owner="miner",
+    block = mine_block(
+        prev_hash=chain.tip_hash(),
+        merkle_root=compute_merkle_root([tx]),
+        timestamp=1,
+        difficulty=config.difficulty,
+        transactions=[tx],
+        coinbase_commitment=hash_hex("cb"),
+        coinbase_amount=config.block_reward,
     )
+    block.coinbase_owner_secret_hash = owner_secret_hash("miner_secret")
+    chain.add_block(block, coinbase_owner="miner")
     alice_note = out_notes[0]
     tx_attack = PrivateTransaction(
         tx_id=TxId("attack"),
@@ -118,6 +119,7 @@ def test_spend_requires_valid_note_witness():
                 commitment=CommitmentHash(hash_hex("eve_out")),
                 amount=50,
                 asset_id="BASE",
+                owner_secret_hash=owner_secret_hash(""),
             )
         ],
         fee=0,
@@ -147,6 +149,7 @@ def test_validate_chain_rejects_forged_commitment_spend():
                 commitment=CommitmentHash(hash_hex("out")),
                 amount=50,
                 asset_id="BASE",
+                owner_secret_hash=owner_secret_hash(""),
             )
         ],
         fee=0,
@@ -260,10 +263,11 @@ def test_conservation_uses_validated_input_amounts_not_claimed_amounts():
                 commitment=CommitmentHash(hash_hex("out")),
                 amount=200,
                 asset_id="BASE",
+                owner_secret_hash=owner_secret_hash(""),
             )
         ],
         fee=0,
     )
     ok, err = chain.state.can_apply_transaction(bad_tx)
     assert not ok
-    assert "Amount" in err or "falsificado" in err.lower()
+    assert "Amount" in err or "falsificado" in err.lower() or "Desbalance" in err
