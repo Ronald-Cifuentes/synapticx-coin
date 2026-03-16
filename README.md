@@ -14,9 +14,9 @@
 - **tx_id = H(payload)**: tx_id deriva del payload canónico; alterar inputs/outputs/fee invalida merkle_root y validación
 - **Validación fuerte**: autorización real (hash(secret)==owner_secret_hash); amount y asset relevantes se resuelven contra el estado (input no es fuente de verdad); commitment único no reutilizable; coinbase según política; difficulty fijada contra policy; merkle root recomputado
 - **Reorg por trabajo acumulado** (no solo longitud)
-- Mempool rechaza tx con inputs inexistentes y conflictos por nullifier
+- Mempool rechaza tx con inputs inexistentes, tx_id inválido y conflictos por nullifier
 - CLI: init-chain, create-wallet, mint-demo-notes, create-transfer, show-chain, show-state, show-utxo-equivalent, mine-block, run-demo, validate-chain
-- Tests automatizados (96 tests)
+- Tests automatizados (108 tests)
 - Simulaciones: supply correctness, mining distribution, double spend
 - Conformance: fixture válido + invalid-cases (input inexistente, reuse commitment, block header inválido)
 
@@ -57,7 +57,7 @@
 # Desde raíz del repo (cd /path/to/coin)
 pip install -e ".[dev]"
 
-# Tests (reproducible en limpio)
+# Tests (requiere pip install -e ".[dev]" previo)
 pytest tests/ -v
 # o
 ./scripts/run_tests.sh
@@ -95,6 +95,7 @@ python simulations/double-spend/run_double_spend_test.py
 python simulations/light-client-leakage/run_leakage_simulator.py
 python simulations/provider-correlation/run_correlation_simulator.py
 python simulations/dag-ordering/run_nullifier_conflict_simulator.py
+python simulations/disclosure-composition/run_composition_simulator.py  # stub
 ```
 
 Cada uno tiene hipótesis, métricas y kill criteria. Ver `research/*/README.md`.
@@ -115,7 +116,7 @@ src/coinlab/
   mempool.py            # Mempool
   miner.py              # build_and_mine_block
   cli.py                # Comandos CLI
-tests/                  # Suite de tests (96)
+tests/                  # Suite de tests (108)
 conformance/            # fixtures, invalid-cases
 simulations/            # supply, mining, double spend
 ```

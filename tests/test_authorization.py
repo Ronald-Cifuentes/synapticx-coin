@@ -47,6 +47,7 @@ def test_existing_commitment_cannot_be_spent_with_attacker_secret():
                 amount=rec.amount,
                 asset_id=rec.asset_id,
                 owner_secret_hash=owner_secret_hash(""),
+                nonce="x",
             )
         ],
         fee=0,
@@ -79,6 +80,7 @@ def test_existing_commitment_cannot_be_stolen_even_with_real_amount():
                 amount=rec.amount,
                 asset_id=rec.asset_id,
                 owner_secret_hash=owner_secret_hash(""),
+                nonce="x",
             )
         ],
         fee=0,
@@ -96,6 +98,7 @@ def test_input_amount_is_taken_from_state_not_from_claimed_field():
         [faucet_note], [50, 50], ["alice", "bob"], fee=0
     )
     chain.state.apply_transaction(tx)
+    out_note = create_note("recipient", 50, "BASE", secret="")
     bad_tx = PrivateTransaction(
         tx_id=TxId("bad"),
         inputs=[
@@ -109,10 +112,11 @@ def test_input_amount_is_taken_from_state_not_from_claimed_field():
         ],
         outputs=[
             TransactionOutput(
-                commitment=CommitmentHash(hash_hex("out")),
+                commitment=out_note.commitment(),
                 amount=50,
                 asset_id="BASE",
-                owner_secret_hash=owner_secret_hash(""),
+                owner_secret_hash=owner_secret_hash(out_note.secret),
+                nonce=out_note.nonce,
             )
         ],
         fee=0,
@@ -132,6 +136,7 @@ def test_input_asset_is_taken_from_state_not_from_claimed_field():
         [faucet_note], [50, 50], ["alice", "bob"], fee=0
     )
     chain.state.apply_transaction(tx)
+    out_note = create_note("recipient", 50, "BASE", secret="")
     legit_tx = PrivateTransaction(
         tx_id=TxId("legit_asset"),
         inputs=[
@@ -145,10 +150,11 @@ def test_input_asset_is_taken_from_state_not_from_claimed_field():
         ],
         outputs=[
             TransactionOutput(
-                commitment=CommitmentHash(hash_hex("out")),
+                commitment=out_note.commitment(),
                 amount=50,
                 asset_id="BASE",
-                owner_secret_hash=owner_secret_hash(""),
+                owner_secret_hash=owner_secret_hash(out_note.secret),
+                nonce=out_note.nonce,
             )
         ],
         fee=0,
@@ -167,6 +173,7 @@ def test_validate_chain_rejects_stolen_commitment_spend():
     chain = Blockchain(config)
     block, faucet_note = chain.create_genesis("faucet")
     rec = chain.state.notes[str(faucet_note.commitment())]
+    out_note = create_note("victim", rec.amount, rec.asset_id, secret="")
     stolen_tx = PrivateTransaction(
         tx_id=TxId("stolen"),
         inputs=[
@@ -180,23 +187,26 @@ def test_validate_chain_rejects_stolen_commitment_spend():
         ],
         outputs=[
             TransactionOutput(
-                commitment=CommitmentHash(hash_hex("out")),
+                commitment=out_note.commitment(),
                 amount=rec.amount,
                 asset_id=rec.asset_id,
-                owner_secret_hash=owner_secret_hash(""),
+                owner_secret_hash=owner_secret_hash(out_note.secret),
+                nonce=out_note.nonce,
             )
         ],
         fee=0,
     )
+    cb_note = create_note("miner", config.block_reward, "BASE")
     blk = mine_block(
         prev_hash=chain.tip_hash(),
         merkle_root=compute_merkle_root([stolen_tx]),
         timestamp=1,
         difficulty=config.difficulty,
         transactions=[stolen_tx],
-        coinbase_commitment=hash_hex("cb"),
+        coinbase_commitment=cb_note.commitment(),
         coinbase_amount=config.block_reward,
-        coinbase_owner_secret_hash=owner_secret_hash("miner"),
+        coinbase_owner_secret_hash=owner_secret_hash(cb_note.secret),
+        coinbase_nonce=cb_note.nonce,
     )
     ok, err = chain.add_block(blk)
     assert not ok
@@ -211,6 +221,7 @@ def test_add_block_rejects_stolen_commitment_spend():
     chain = Blockchain(config)
     block, faucet_note = chain.create_genesis("faucet")
     rec = chain.state.notes[str(faucet_note.commitment())]
+    out_note = create_note("victim", rec.amount, rec.asset_id, secret="")
     stolen_tx = PrivateTransaction(
         tx_id=TxId(""),
         inputs=[
@@ -224,24 +235,27 @@ def test_add_block_rejects_stolen_commitment_spend():
         ],
         outputs=[
             TransactionOutput(
-                commitment=CommitmentHash(hash_hex("out")),
+                commitment=out_note.commitment(),
                 amount=rec.amount,
                 asset_id=rec.asset_id,
-                owner_secret_hash=owner_secret_hash(""),
+                owner_secret_hash=owner_secret_hash(out_note.secret),
+                nonce=out_note.nonce,
             )
         ],
         fee=0,
     )
     stolen_tx.tx_id = tx_id_from_payload(stolen_tx)
+    cb_note = create_note("miner", config.block_reward, "BASE")
     blk = mine_block(
         prev_hash=chain.tip_hash(),
         merkle_root=compute_merkle_root([stolen_tx]),
         timestamp=1,
         difficulty=config.difficulty,
         transactions=[stolen_tx],
-        coinbase_commitment=hash_hex("cb"),
+        coinbase_commitment=cb_note.commitment(),
         coinbase_amount=config.block_reward,
-        coinbase_owner_secret_hash=owner_secret_hash("miner"),
+        coinbase_owner_secret_hash=owner_secret_hash(cb_note.secret),
+        coinbase_nonce=cb_note.nonce,
     )
     ok, err = chain.add_block(blk)
     assert not ok
@@ -257,6 +271,7 @@ def test_reorg_rejects_chain_with_stolen_commitment_spend():
     chain_alt = Blockchain(config)
     block, faucet_note = chain_alt.create_genesis("faucet")
     rec = chain_alt.state.notes[str(faucet_note.commitment())]
+    out_note = create_note("victim", rec.amount, rec.asset_id, secret="")
     stolen_tx = PrivateTransaction(
         tx_id=TxId(""),
         inputs=[
@@ -270,24 +285,27 @@ def test_reorg_rejects_chain_with_stolen_commitment_spend():
         ],
         outputs=[
             TransactionOutput(
-                commitment=CommitmentHash(hash_hex("out")),
+                commitment=out_note.commitment(),
                 amount=rec.amount,
                 asset_id=rec.asset_id,
-                owner_secret_hash=owner_secret_hash(""),
+                owner_secret_hash=owner_secret_hash(out_note.secret),
+                nonce=out_note.nonce,
             )
         ],
         fee=0,
     )
     stolen_tx.tx_id = tx_id_from_payload(stolen_tx)
+    cb_note = create_note("miner", config.block_reward, "BASE")
     blk = mine_block(
         prev_hash=chain_alt.tip_hash(),
         merkle_root=compute_merkle_root([stolen_tx]),
         timestamp=1,
         difficulty=config.difficulty,
         transactions=[stolen_tx],
-        coinbase_commitment=hash_hex("cb"),
+        coinbase_commitment=cb_note.commitment(),
         coinbase_amount=config.block_reward,
-        coinbase_owner_secret_hash=owner_secret_hash("miner"),
+        coinbase_owner_secret_hash=owner_secret_hash(cb_note.secret),
+        coinbase_nonce=cb_note.nonce,
     )
     chain_alt.blocks.append(blk)
     for _ in range(2):
@@ -306,6 +324,7 @@ def test_new_outputs_are_spendable_only_with_legitimate_secret():
     )
     chain.state.apply_transaction(tx)
     alice_note = out_notes[0]
+    legit_out = create_note("recipient", 50, "BASE", secret="")
     ok, _ = chain.state.can_apply_transaction(
         PrivateTransaction(
             tx_id=TxId("legit"),
@@ -320,16 +339,18 @@ def test_new_outputs_are_spendable_only_with_legitimate_secret():
             ],
             outputs=[
                 TransactionOutput(
-                    commitment=CommitmentHash(hash_hex("out")),
+                    commitment=legit_out.commitment(),
                     amount=50,
                     asset_id="BASE",
-                    owner_secret_hash=owner_secret_hash(""),
+                    owner_secret_hash=owner_secret_hash(legit_out.secret),
+                    nonce=legit_out.nonce,
                 )
             ],
             fee=0,
         )
     )
     assert ok
+    out_note = create_note("recipient", 50, "BASE", secret="")
     ok2, _ = chain.state.can_apply_transaction(
         PrivateTransaction(
             tx_id=TxId("attack"),
@@ -344,10 +365,11 @@ def test_new_outputs_are_spendable_only_with_legitimate_secret():
             ],
             outputs=[
                 TransactionOutput(
-                    commitment=CommitmentHash(hash_hex("out")),
+                    commitment=out_note.commitment(),
                     amount=50,
                     asset_id="BASE",
-                    owner_secret_hash=owner_secret_hash(""),
+                    owner_secret_hash=owner_secret_hash(out_note.secret),
+                    nonce=out_note.nonce,
                 )
             ],
             fee=0,

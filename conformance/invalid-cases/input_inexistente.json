@@ -1,7 +1,7 @@
 {
   "description": "Tx con input commitment inexistente. Mempool debe rechazar.",
   "tx": {
-    "tx_id": "9013044dd0c41411b6208c3eaca1ee5bcf9bd9ae560798435464996b9b969094",
+    "tx_id": "54616e17e2f92395a219f474c5742214b5e412544e0e4a2f36b9702b50d826f0",
     "inputs": [
       {
         "commitment": "e8bc2f4196a15e5c647454420b12ebf7ac6afb183f4b9b77078658e9c3b4c91a",
@@ -13,10 +13,11 @@
     ],
     "outputs": [
       {
-        "commitment": "762069bc07a6e1b5df123a5ae7bd91c10daa04694fbaa17fba0cd6a8dcce8f22",
+        "commitment": "460ab84b9962e11b07ebe891e49d60e263f52949afa2b429cd431e3b99ac1283",
         "amount": 50,
         "asset_id": "BASE",
-        "owner_secret_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        "owner_secret_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "nonce": "invalid_nonce"
       }
     ],
     "fee": 0

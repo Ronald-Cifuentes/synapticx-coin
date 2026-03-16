@@ -8,4 +8,4 @@
 python simulations/disclosure-composition/run_composition_simulator.py
 ```
 
-El script documenta la estructura del experimento. **Modelo formal y adversario no implementados.** Requiere: grafo financiero simulado, tipos de prueba con scope, adversario que estima % reconstruible.
+**Stub ejecutable.** El script documenta la estructura del experimento. Experimento completo no implementado: modelo formal y adversario no existen. Requiere: grafo financiero simulado, tipos de prueba con scope, adversario que estima % reconstruible.

@@ -49,7 +49,6 @@ def test_output_cannot_reuse_existing_commitment_with_new_owner_secret_hash():
                 amount=50,
                 asset_id="BASE",
                 owner_secret_hash=owner_secret_hash("attacker"),
-                            nonce="x",
             )
         ],
         fee=0,
@@ -85,27 +84,24 @@ def test_add_block_rejects_reused_existing_commitment_output():
                 amount=50,
                 asset_id="BASE",
                 owner_secret_hash=owner_secret_hash("attacker"),
-                            nonce="x",
             )
         ],
         fee=0,
     )
     hijack_tx.tx_id = tx_id_from_payload(hijack_tx)
-    cb_note = create_note("miner", config.block_reward, "BASE")
     blk = mine_block(
         prev_hash=chain.tip_hash(),
         merkle_root=compute_merkle_root([hijack_tx]),
         timestamp=1,
         difficulty=config.difficulty,
         transactions=[hijack_tx],
-        coinbase_commitment=cb_note.commitment(),
+        coinbase_commitment=hash_hex("cb"),
         coinbase_amount=config.block_reward,
-        coinbase_owner_secret_hash=owner_secret_hash(cb_note.secret),
-        coinbase_nonce=cb_note.nonce,
+        coinbase_owner_secret_hash=owner_secret_hash("miner"),
     )
     ok, err = chain.add_block(blk)
     assert not ok
-    assert "reutilizado" in err or "Commitment" in err or "commitment" in err or "aplicable" in err or "deriva" in err
+    assert "reutilizado" in err or "Commitment" in err or "aplicable" in err
 
 
 def test_validate_chain_rejects_reused_existing_commitment_output():
@@ -116,17 +112,15 @@ def test_validate_chain_rejects_reused_existing_commitment_output():
     tx1, out_notes = create_transfer_with_output_notes(
         [faucet_note], [50, 50], ["alice", "bob"], fee=0
     )
-    cb_note1 = create_note("miner", config.block_reward, "BASE")
     blk1 = mine_block(
         prev_hash=chain.tip_hash(),
         merkle_root=compute_merkle_root([tx1]),
         timestamp=1,
         difficulty=config.difficulty,
         transactions=[tx1],
-        coinbase_commitment=cb_note1.commitment(),
+        coinbase_commitment=hash_hex("cb1"),
         coinbase_amount=config.block_reward,
-        coinbase_owner_secret_hash=owner_secret_hash(cb_note1.secret),
-        coinbase_nonce=cb_note1.nonce,
+        coinbase_owner_secret_hash=owner_secret_hash("miner"),
     )
     ok1, _ = chain.add_block(blk1, coinbase_owner="miner")
     assert ok1
@@ -147,22 +141,19 @@ def test_validate_chain_rejects_reused_existing_commitment_output():
                 amount=50,
                 asset_id="BASE",
                 owner_secret_hash=owner_secret_hash("attacker"),
-                            nonce="x",
             )
         ],
         fee=0,
     )
-    cb_note2 = create_note("miner", config.block_reward, "BASE")
     blk2 = mine_block(
         prev_hash=chain.tip_hash(),
         merkle_root=compute_merkle_root([hijack_tx]),
         timestamp=2,
         difficulty=config.difficulty,
         transactions=[hijack_tx],
-        coinbase_commitment=cb_note2.commitment(),
+        coinbase_commitment=hash_hex("cb2"),
         coinbase_amount=config.block_reward,
-        coinbase_owner_secret_hash=owner_secret_hash(cb_note2.secret),
-        coinbase_nonce=cb_note2.nonce,
+        coinbase_owner_secret_hash=owner_secret_hash("miner"),
     )
     ok2, _ = chain.add_block(blk2)
     assert not ok2
@@ -200,22 +191,19 @@ def test_reorg_rejects_chain_with_reused_existing_commitment_output():
                 amount=50,
                 asset_id="BASE",
                 owner_secret_hash=owner_secret_hash("attacker"),
-                            nonce="x",
             )
         ],
         fee=0,
     )
-    cb_note = create_note("miner", config.block_reward, "BASE")
     blk = mine_block(
         prev_hash=chain_alt.tip_hash(),
         merkle_root=compute_merkle_root([hijack_tx]),
         timestamp=1,
         difficulty=config.difficulty,
         transactions=[hijack_tx],
-        coinbase_commitment=cb_note.commitment(),
+        coinbase_commitment=hash_hex("cb"),
         coinbase_amount=config.block_reward,
-        coinbase_owner_secret_hash=owner_secret_hash(cb_note.secret),
-        coinbase_nonce=cb_note.nonce,
+        coinbase_owner_secret_hash=owner_secret_hash("miner"),
     )
     chain_alt.blocks.append(blk)
     for _ in range(2):
@@ -242,7 +230,6 @@ def test_coinbase_cannot_reuse_existing_commitment():
         coinbase_commitment=str(out_notes[0].commitment()),
         coinbase_amount=config.block_reward,
         coinbase_owner_secret_hash=owner_secret_hash("miner"),
-        coinbase_nonce="x",
     )
     ok, err = chain.add_block(blk)
     assert not ok
@@ -256,7 +243,7 @@ def test_transaction_cannot_contain_duplicate_output_commitments():
     config = Config(difficulty=2)
     chain = Blockchain(config)
     block, faucet_note = chain.create_genesis("faucet")
-    dup_note = create_note("", 50, "BASE")
+    comm = hash_hex("dup_out")
     dup_tx = PrivateTransaction(
         tx_id=TxId("dup"),
         inputs=[
@@ -270,18 +257,16 @@ def test_transaction_cannot_contain_duplicate_output_commitments():
         ],
         outputs=[
             TransactionOutput(
-                commitment=dup_note.commitment(),
+                commitment=CommitmentHash(comm),
                 amount=50,
                 asset_id="BASE",
-                owner_secret_hash=owner_secret_hash(dup_note.secret),
-                nonce=dup_note.nonce,
+                owner_secret_hash=owner_secret_hash(""),
             ),
             TransactionOutput(
-                commitment=dup_note.commitment(),
+                commitment=CommitmentHash(comm),
                 amount=50,
                 asset_id="BASE",
-                owner_secret_hash=owner_secret_hash(dup_note.secret),
-                nonce=dup_note.nonce,
+                owner_secret_hash=owner_secret_hash(""),
             ),
         ],
         fee=0,
@@ -319,22 +304,19 @@ def test_block_cannot_contain_duplicate_output_commitments_across_transactions()
                 amount=50,
                 asset_id="BASE",
                 owner_secret_hash=owner_secret_hash("eve"),
-                            nonce="x",
             )
         ],
         fee=0,
     )
-    cb_note = create_note("miner", config.block_reward, "BASE")
     blk = mine_block(
         prev_hash=chain.tip_hash(),
         merkle_root=compute_merkle_root([tx1, tx2]),
         timestamp=1,
         difficulty=config.difficulty,
         transactions=[tx1, tx2],
-        coinbase_commitment=cb_note.commitment(),
+        coinbase_commitment=hash_hex("cb"),
         coinbase_amount=config.block_reward,
-        coinbase_owner_secret_hash=owner_secret_hash(cb_note.secret),
-        coinbase_nonce=cb_note.nonce,
+        coinbase_owner_secret_hash=owner_secret_hash("miner"),
     )
     ok, err = chain.add_block(blk)
     assert not ok

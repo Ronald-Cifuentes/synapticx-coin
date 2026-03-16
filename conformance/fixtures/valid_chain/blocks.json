@@ -4,30 +4,31 @@
       "prev_hash": "0000000000000000000000000000000000000000000000000000000000000000",
       "merkle_root": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "timestamp": 0,
-      "nonce": 305,
+      "nonce": 490,
       "difficulty": 2
     },
     "transactions": [],
-    "coinbase_commitment": "b90a6e48fdcfc5e28a617e50936156e7c4365a845e8b00f6ac5bc42d32f89ccd",
+    "coinbase_commitment": "75a1a6684f811e2b503bfc5b0d4bf6636a1fd491adc4e67d562fc1724c9279e1",
     "coinbase_amount": 100,
     "coinbase_owner_secret_hash": "58eb71f44d4d49e33b95485bf9c612ef33bd5d15362adda4f2352d43014302e1",
+    "coinbase_nonce": "aeebad4a796fcc2e15dc4c6061b45ed9b373f26adfc798ca7d2d8cc58182718e",
     "chain_params_hash": "add4cdca262e3b8811a3717de71dea73841a98411ce7ae3aba5de3e9de0415ee"
   },
   {
     "header": {
-      "prev_hash": "006ce670a53085ffc11b6072f2a2346055c004dc6a852731f3ad144217aeb7f8",
-      "merkle_root": "d7f5fc66fc583c8c0145dadaf9751424ad42cc27dd466a2a8148c8c6ecfdd3b6",
-      "timestamp": 1773679217,
-      "nonce": 224,
+      "prev_hash": "00ec8517b00726228f9dd5ab4a1dca6e1eb8df44e32e037bcd2f8422512b2dc5",
+      "merkle_root": "ff3ddfaaf795575b07a856004ac3ab00a010cb0eff3b9e362050cf9037237c2a",
+      "timestamp": 1773681857,
+      "nonce": 453,
       "difficulty": 2
     },
     "transactions": [
       {
-        "tx_id": "6758113b24855d81383c497f6943f051ed84d909b3d9cf8194c35af04a593c17",
+        "tx_id": "12317c6f0e2f4ed816d77c52152c4d917be5b8f89f60db3f2096abec25371a69",
         "inputs": [
           {
-            "commitment": "b90a6e48fdcfc5e28a617e50936156e7c4365a845e8b00f6ac5bc42d32f89ccd",
-            "nullifier": "43882460c9d73103cf3d12ef58d6503c338e74e6cf6f51924f70c7fb89e8ade7",
+            "commitment": "75a1a6684f811e2b503bfc5b0d4bf6636a1fd491adc4e67d562fc1724c9279e1",
+            "nullifier": "081cad42c229fe2e3e0d500248b616366829435451ed0312674f0e64e913fd3f",
             "amount": 100,
             "asset_id": "BASE",
             "secret": "genesis_faucet_secret_mvp"
@@ -35,24 +36,27 @@
         ],
         "outputs": [
           {
-            "commitment": "a25faddcba72d52b618550554d777d6773ddc93d85436f58014cd30c6d4db718",
+            "commitment": "94f95ad12695758e4dab3ae953e406ed5d19b6653b78b928893efbe12f3054c5",
             "amount": 50,
             "asset_id": "BASE",
-            "owner_secret_hash": "183f1c830c64c7f46c05eebac1a8f581c814b8ec7d04ec43de116a7ad08f87fa"
+            "owner_secret_hash": "936d7dc45d84b2d32a753d3226bb616dd705a4c6850dc592cb6ef991cbc1e078",
+            "nonce": "9b43e9aa9af588d95190cdb828b7059b"
           },
           {
-            "commitment": "0d20ae477a195fd3ee71ed606fadd4e2086fe6b6f1d03dbdcca324b3d75aa70c",
+            "commitment": "b68b876894bf2213f64619a6dc583f49eafea9acd7642cd1e1e16fbc3ab6c482",
             "amount": 50,
             "asset_id": "BASE",
-            "owner_secret_hash": "0b6eaa864ad2559c2964e4f6d9e8da1b1186b56f1b9531ef25a50984950cf68a"
+            "owner_secret_hash": "56d9620772729d5ce2b50ad5da8a12bad41a3e8e324cad46856874eae2d953ad",
+            "nonce": "6bc8b8a2aa64e1754c1dd5c654173337"
           }
         ],
         "fee": 0
       }
     ],
-    "coinbase_commitment": "aedd23ad5806d1b4279388e5cce581a49033d86a853e2568d444b71c1daf03ad",
+    "coinbase_commitment": "95f8ffb1e8a3608a68b20389c1b719aedf2b9bb25c7f71b58c8a2f3b42c00a2c",
     "coinbase_amount": 100,
-    "coinbase_owner_secret_hash": "e983513495bfc44997ec5924db5f2ffbdc512494a9bf54f2d02c9c5fee0665eb",
+    "coinbase_owner_secret_hash": "6a7f3b18c40b0b54e7a6dfbe7451c7ecdf1b837ff1d8ccdb3d4dbe94d5859d6f",
+    "coinbase_nonce": "ff29f7d97344b54d2b3eab7cd44c519b",
     "chain_params_hash": null
   }
 ]

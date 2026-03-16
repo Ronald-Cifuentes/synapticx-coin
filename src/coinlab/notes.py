@@ -10,7 +10,7 @@ import secrets
 from dataclasses import dataclass, field
 from typing import Optional
 
-from .crypto_primitives import commitment_for_note, nullifier_for_note
+from .crypto_primitives import commitment_for_output, nullifier_for_note, owner_secret_hash
 from .types import CommitmentHash, NoteId
 
 
@@ -29,13 +29,13 @@ class Note:
     secret: str  # Para nullifier; en producción sería material de clave
 
     def commitment(self) -> CommitmentHash:
-        """Commitment público de la nota."""
+        """Commitment público de la nota. Verificable: H(owner_secret_hash|amount|asset_id|nonce)."""
         return CommitmentHash(
-            commitment_for_note(
-                self.owner_key,
+            commitment_for_output(
+                owner_secret_hash(self.secret),
                 self.amount,
-                self.nonce,
                 self.asset_id,
+                self.nonce,
             )
         )
 

@@ -69,6 +69,7 @@ def main():
                 amount=50,
                 asset_id="BASE",
                 owner_secret_hash=owner_secret_hash(""),
+                nonce="x",
             )
         ],
         fee=0,

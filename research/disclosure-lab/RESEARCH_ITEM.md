@@ -21,9 +21,9 @@ Con 20 pruebas típicas en 1 año, adversario que recibe todas reconstruye ≤20
 
 ## Deliverables
 
-- Modelo formal en `research/disclosure-lab/`
-- Resultados en `simulations/disclosure-composition/` (harness pendiente)
-- Catálogo combinaciones seguras vs. leaky
+- Modelo formal en `research/disclosure-lab/` (pendiente)
+- Stub en `simulations/disclosure-composition/run_composition_simulator.py`; experimento completo pendiente
+- Catálogo combinaciones seguras vs. leaky (pendiente)
 
 ## Acceptance criteria
 
@@ -40,7 +40,7 @@ Con 20 pruebas típicas en 1 año, adversario que recibe todas reconstruye ≤20
 ## Dependencies
 
 - Modelo formal (no existe)
-- Simulador composición (no existe — ver nota)
+- Stub ejecutable existe; no simula grafo ni adversario
 
 ## Priority
 
@@ -48,9 +48,9 @@ P1 — Disclosure amplio (nómina, auditoría) es ambicioso. Esencial: pago, rec
 
 ## Experimento razonable
 
-**No existe harness ejecutable aún.** `simulations/disclosure-composition/` tiene solo README. Para cerrar la hipótesis se requiere:
+**Stub ejecutable:** `run_composition_simulator.py`. Experimento completo no implementado: no modela grafo ni adversario; no produce métricas. Para cerrar la hipótesis se requiere:
 - Definir estructura de prueba (scope, audiencia, granularidad)
 - Simulador que genere N pruebas y estime % grafo reconstruible
 - Adversario que recibe pruebas y reconstruye
 
-Se declara explícitamente: **no hay experimento ejecutable para este frente.**
+Se declara explícitamente: **no hay experimento completo para este frente.**

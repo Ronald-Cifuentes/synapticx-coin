@@ -16,6 +16,7 @@ from coinlab.transactions import (
     TransactionInput,
     TransactionOutput,
     create_transfer_with_output_notes,
+    tx_id_from_payload,
 )
 from coinlab.types import CommitmentHash, TxId
 
@@ -45,28 +46,32 @@ def test_add_block_is_atomic_on_failure():
                 secret=out_notes[1].secret,
             )
         ],
-        outputs=[
-            TransactionOutput(
-                commitment=CommitmentHash(hash_hex("out")),
-                amount=60,
-                asset_id="BASE",
-                owner_secret_hash=owner_secret_hash(""),
-            )
-        ],
+            outputs=[
+                TransactionOutput(
+                    commitment=CommitmentHash(hash_hex("out")),
+                    amount=60,
+                    asset_id="BASE",
+                    owner_secret_hash=owner_secret_hash(""),
+                    nonce="x",
+                )
+            ],
         fee=0,
     )
     blocks_before = len(chain.blocks)
     commitments_before = chain.state.commitments.copy()
     nullifiers_before = chain.state.nullifiers_used.copy()
 
+    cb_note = create_note("miner", config.block_reward, "BASE")
     bad_block = mine_block(
         prev_hash=chain.tip_hash(),
         merkle_root=compute_merkle_root([tx2_valid, tx2_invalid]),
         timestamp=1,
         difficulty=config.difficulty,
         transactions=[tx2_valid, tx2_invalid],
-        coinbase_commitment=hash_hex("cb"),
+        coinbase_commitment=cb_note.commitment(),
         coinbase_amount=config.block_reward,
+        coinbase_owner_secret_hash=owner_secret_hash(cb_note.secret),
+        coinbase_nonce=cb_note.nonce,
     )
     ok, err = chain.add_block(bad_block)
     assert not ok
@@ -100,23 +105,27 @@ def test_reorg_rejects_unbalanced_transaction_chain():
             )
         ],
         outputs=[
-            TransactionOutput(
-                commitment=CommitmentHash(hash_hex("y")),
-                amount=150,
-                asset_id="BASE",
-                owner_secret_hash=owner_secret_hash(""),
-            )
+                TransactionOutput(
+                    commitment=CommitmentHash(hash_hex("y")),
+                    amount=150,
+                    asset_id="BASE",
+                    owner_secret_hash=owner_secret_hash(""),
+                    nonce="x",
+                )
         ],
         fee=0,
     )
+    cb_note = create_note("miner", config.block_reward, "BASE")
     bad_block = mine_block(
         prev_hash=chain_alt.tip_hash(),
         merkle_root=compute_merkle_root([unbalanced_tx]),
         timestamp=1,
         difficulty=config.difficulty,
         transactions=[unbalanced_tx],
-        coinbase_commitment=hash_hex("z"),
+        coinbase_commitment=cb_note.commitment(),
         coinbase_amount=config.block_reward,
+        coinbase_owner_secret_hash=owner_secret_hash(cb_note.secret),
+        coinbase_nonce=cb_note.nonce,
     )
     chain_alt.blocks.append(bad_block)
 
@@ -162,18 +171,22 @@ def test_reorg_is_atomic_on_failure():
                 amount=50,
                 asset_id="BASE",
                 owner_secret_hash=owner_secret_hash(""),
+                nonce="x",
             )
         ],
         fee=0,
     )
+    cb_note = create_note("miner", config.block_reward, "BASE")
     bad_block = mine_block(
         prev_hash=chain_alt.tip_hash(),
         merkle_root=compute_merkle_root([fake_tx]),
         timestamp=1,
         difficulty=config.difficulty,
         transactions=[fake_tx],
-        coinbase_commitment=hash_hex("cb"),
+        coinbase_commitment=cb_note.commitment(),
         coinbase_amount=config.block_reward,
+        coinbase_owner_secret_hash=owner_secret_hash(cb_note.secret),
+        coinbase_nonce=cb_note.nonce,
     )
     chain_alt.blocks.append(bad_block)
 
@@ -202,23 +215,27 @@ def test_validate_block_rejects_internal_nullifier_conflict():
         tx_id=TxId("dup"),
         inputs=tx2a.inputs,
         outputs=[
-            TransactionOutput(
-                commitment=CommitmentHash(hash_hex("other")),
-                amount=50,
-                asset_id="BASE",
-                owner_secret_hash=owner_secret_hash(""),
-            )
+                TransactionOutput(
+                    commitment=CommitmentHash(hash_hex("other")),
+                    amount=50,
+                    asset_id="BASE",
+                    owner_secret_hash=owner_secret_hash(""),
+                    nonce="x",
+                )
         ],
         fee=0,
     )
+    cb_note = create_note("miner", config.block_reward, "BASE")
     block_with_conflict = mine_block(
         prev_hash=chain.tip_hash(),
         merkle_root=compute_merkle_root([tx2a, tx2b]),
         timestamp=1,
         difficulty=config.difficulty,
         transactions=[tx2a, tx2b],
-        coinbase_commitment=hash_hex("cb"),
+        coinbase_commitment=cb_note.commitment(),
         coinbase_amount=config.block_reward,
+        coinbase_owner_secret_hash=owner_secret_hash(cb_note.secret),
+        coinbase_nonce=cb_note.nonce,
     )
     ok, err = validate_block(block_with_conflict, 1, config)
     assert not ok
@@ -230,8 +247,9 @@ def test_mempool_safe_path_rejects_nonexistent_input_without_optional_magic():
     config = Config(difficulty=2)
     chain = Blockchain(config)
     chain.create_genesis("faucet")
+    out_note = create_note("recipient", 50, "BASE", secret="")
     fake_tx = PrivateTransaction(
-        tx_id=TxId("fake"),
+        tx_id=TxId(""),
         inputs=[
             TransactionInput(
                 commitment=CommitmentHash(hash_hex("inexistente")),
@@ -243,14 +261,16 @@ def test_mempool_safe_path_rejects_nonexistent_input_without_optional_magic():
         ],
         outputs=[
             TransactionOutput(
-                commitment=CommitmentHash(hash_hex("o")),
+                commitment=out_note.commitment(),
                 amount=50,
                 asset_id="BASE",
-                owner_secret_hash=owner_secret_hash(""),
+                owner_secret_hash=owner_secret_hash(out_note.secret),
+                nonce=out_note.nonce,
             )
         ],
         fee=0,
     )
+    fake_tx.tx_id = tx_id_from_payload(fake_tx)
     mempool = Mempool()
     ok, err = mempool.add_transaction_validated(fake_tx, chain.state)
     assert not ok

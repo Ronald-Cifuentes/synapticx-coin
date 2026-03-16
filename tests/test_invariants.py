@@ -44,6 +44,7 @@ def test_forged_input_amount_on_existing_commitment_fails():
                 amount=1000,
                 asset_id="BASE",
                 owner_secret_hash=owner_secret_hash(""),
+                nonce="x",
             )
         ],
         fee=0,
@@ -76,6 +77,7 @@ def test_forged_nullifier_for_existing_commitment_fails():
                 amount=100,
                 asset_id="BASE",
                 owner_secret_hash=owner_secret_hash(""),
+                nonce="x",
             )
         ],
         fee=0,
@@ -93,15 +95,17 @@ def test_spend_requires_valid_note_witness():
     tx, out_notes = create_transfer_with_output_notes(
         [faucet_note], [50, 50], ["alice", "bob"], fee=0
     )
+    cb_note = create_note("miner", config.block_reward, "BASE")
     block = mine_block(
         prev_hash=chain.tip_hash(),
         merkle_root=compute_merkle_root([tx]),
         timestamp=1,
         difficulty=config.difficulty,
         transactions=[tx],
-        coinbase_commitment=hash_hex("cb"),
+        coinbase_commitment=cb_note.commitment(),
         coinbase_amount=config.block_reward,
-        coinbase_owner_secret_hash=owner_secret_hash("miner_secret"),
+        coinbase_owner_secret_hash=owner_secret_hash(cb_note.secret),
+        coinbase_nonce=cb_note.nonce,
     )
     chain.add_block(block, coinbase_owner="miner")
     alice_note = out_notes[0]
@@ -122,6 +126,7 @@ def test_spend_requires_valid_note_witness():
                 amount=50,
                 asset_id="BASE",
                 owner_secret_hash=owner_secret_hash(""),
+                nonce="x",
             )
         ],
         fee=0,
@@ -152,18 +157,22 @@ def test_validate_chain_rejects_forged_commitment_spend():
                 amount=50,
                 asset_id="BASE",
                 owner_secret_hash=owner_secret_hash(""),
+                nonce="x",
             )
         ],
         fee=0,
     )
+    cb_note = create_note("miner", config.block_reward, "BASE")
     block = mine_block(
         prev_hash=chain.tip_hash(),
         merkle_root=compute_merkle_root([forged_tx]),
         timestamp=1,
         difficulty=config.difficulty,
         transactions=[forged_tx],
-        coinbase_commitment=hash_hex("cb"),
+        coinbase_commitment=cb_note.commitment(),
         coinbase_amount=config.block_reward,
+        coinbase_owner_secret_hash=owner_secret_hash(cb_note.secret),
+        coinbase_nonce=cb_note.nonce,
     )
     ok, err = chain.add_block(block)
     assert not ok
@@ -177,14 +186,17 @@ def test_block_with_forged_header_difficulty_fails():
     config = Config(difficulty=2)
     chain = Blockchain(config)
     chain.create_genesis("faucet")
+    cb_note = create_note("miner", config.block_reward, "BASE")
     block = mine_block(
         prev_hash=chain.tip_hash(),
         merkle_root=hash_hex(""),
         timestamp=1,
         difficulty=4,
         transactions=[],
-        coinbase_commitment=hash_hex("x"),
+        coinbase_commitment=cb_note.commitment(),
         coinbase_amount=config.block_reward,
+        coinbase_owner_secret_hash=owner_secret_hash(cb_note.secret),
+        coinbase_nonce=cb_note.nonce,
     )
     ok, err = validate_block(block, 1, config)
     assert not ok
@@ -196,14 +208,17 @@ def test_block_work_does_not_trust_free_header_difficulty():
     config = Config(difficulty=2)
     chain = Blockchain(config)
     chain.create_genesis("faucet")
+    cb_note = create_note("miner", config.block_reward, "BASE")
     block = mine_block(
         prev_hash=chain.tip_hash(),
         merkle_root=hash_hex(""),
         timestamp=1,
         difficulty=2,
         transactions=[],
-        coinbase_commitment=hash_hex("x"),
+        coinbase_commitment=cb_note.commitment(),
         coinbase_amount=config.block_reward,
+        coinbase_owner_secret_hash=owner_secret_hash(cb_note.secret),
+        coinbase_nonce=cb_note.nonce,
     )
     block.header.difficulty = 8
     work = block_work(block, expected_block_difficulty(1, config))
@@ -223,14 +238,17 @@ def test_reorg_rejects_fake_heavier_chain_with_invalid_difficulty():
     chain_alt = Blockchain(config)
     chain_alt.create_genesis("faucet")
     build_and_mine_block(chain_alt, Mempool(), "miner")
+    cb_note = create_note("miner", config.block_reward, "BASE")
     block_bad = mine_block(
         prev_hash=chain_alt.tip_hash(),
         merkle_root=hash_hex(""),
         timestamp=2,
         difficulty=4,
         transactions=[],
-        coinbase_commitment=hash_hex("y"),
+        coinbase_commitment=cb_note.commitment(),
         coinbase_amount=config.block_reward,
+        coinbase_owner_secret_hash=owner_secret_hash(cb_note.secret),
+        coinbase_nonce=cb_note.nonce,
     )
     chain_alt.blocks.append(block_bad)
     ok, err = chain.reorg_to(chain_alt.blocks)
@@ -266,6 +284,7 @@ def test_conservation_uses_validated_input_amounts_not_claimed_amounts():
                 amount=200,
                 asset_id="BASE",
                 owner_secret_hash=owner_secret_hash(""),
+                nonce="x",
             )
         ],
         fee=0,

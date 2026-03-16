@@ -9,7 +9,7 @@ import json
 from dataclasses import dataclass
 from typing import List, Optional
 
-from .crypto_primitives import hash_hex, nullifier_for_note, owner_secret_hash
+from .crypto_primitives import commitment_for_output, hash_hex, nullifier_for_note, owner_secret_hash
 from .notes import Note, create_note
 from .types import CommitmentHash, TxId
 
@@ -35,6 +35,7 @@ def _tx_canonical_payload(tx: "PrivateTransaction") -> str:
             "a": o.amount,
             "as": o.asset_id,
             "o": o.owner_secret_hash,
+            "n": getattr(o, "nonce", "") or "",
         }
         for o in tx.outputs
     ]
@@ -76,15 +77,16 @@ class TransactionInput:
 
 @dataclass
 class TransactionOutput:
-    """Output: nuevo commitment de nota creada.
-    owner_secret_hash: obligatorio para que el output sea gastable.
-    amount/asset_id: metadata; la verdad para gasto sale del NoteRecord en estado.
+    """Output: commitment verificable de nota creada.
+    commitment = H(owner_secret_hash|amount|asset_id|nonce).
+    nonce: obligatorio para verificación criptográfica del commitment.
     """
 
     commitment: CommitmentHash
     amount: int
     asset_id: str
-    owner_secret_hash: str  # hash(secret) del receptor; obligatorio para autorización
+    owner_secret_hash: str
+    nonce: str  # Obligatorio: commitment debe derivar de metadata
 
 
 @dataclass
@@ -154,6 +156,7 @@ def create_transfer_transaction(
             amount=n.amount,
             asset_id=n.asset_id,
             owner_secret_hash=owner_secret_hash(n.secret),
+            nonce=n.nonce,
         )
         for n in output_notes
     ]
@@ -189,6 +192,7 @@ def create_transfer_with_output_notes(
             amount=n.amount,
             asset_id=n.asset_id,
             owner_secret_hash=owner_secret_hash(n.secret),
+            nonce=n.nonce,
         )
         for n in output_notes
     ]
@@ -216,10 +220,33 @@ def create_transfer_with_output_notes(
     return tx, output_notes
 
 
+def _verify_output_commitment(o: TransactionOutput) -> tuple[bool, Optional[str]]:
+    """
+    Verifica que output.commitment derive de metadata.
+    commitment debe ser H(owner_secret_hash|amount|asset_id|nonce).
+    """
+    nonce = getattr(o, "nonce", None) or ""
+    if not nonce:
+        return False, "Output sin nonce: commitment no verificable"
+    expected = commitment_for_output(
+        o.owner_secret_hash,
+        o.amount,
+        o.asset_id,
+        nonce,
+    )
+    actual = o.commitment if isinstance(o.commitment, str) else str(o.commitment)
+    if actual != expected:
+        return False, (
+            f"Output commitment no deriva de metadata: "
+            f"esperado H(owner_secret_hash|amount|asset_id|nonce), actual {actual[:16]}..."
+        )
+    return True, None
+
+
 def validate_transaction_basic(tx: PrivateTransaction) -> tuple[bool, Optional[str]]:
     """
-    Valida transacción estructural: presencia, cardinalidad, fee, formato.
-    NO valida propiedad ni amount/asset real (eso depende del estado).
+    Valida transacción estructural: presencia, cardinalidad, fee, formato,
+    y que cada output.commitment derive de sus campos (owner_secret_hash|amount|asset_id|nonce).
     """
     if not tx.inputs:
         return False, "Sin inputs"
@@ -242,6 +269,9 @@ def validate_transaction_basic(tx: PrivateTransaction) -> tuple[bool, Optional[s
     for o in tx.outputs:
         if o.asset_id != asset:
             return False, "Asset mezclado en outputs"
+        ok, err = _verify_output_commitment(o)
+        if not ok:
+            return False, err
         c = o.commitment if isinstance(o.commitment, str) else str(o.commitment)
         if c in seen:
             return False, f"Output duplicado en misma tx: {c[:16]}..."

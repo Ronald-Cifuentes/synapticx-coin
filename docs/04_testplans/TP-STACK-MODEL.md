@@ -20,7 +20,7 @@
 | **L1** | Cadena lineal PoW, notas, nullifiers, conservación, config constitucional, block/tx integridad | `run_supply_correctness`, `run_double_spend`, `run_basic_mining` | blockDAG, supply con ZK | Supply correctness serio; blockDAG |
 | **L2** | — | — | Pagos rápidos con exposición acotada | No demostrado; puede contaminar base |
 | **L3** | — | — | Overcollateralizado privado | Mecanismo vacío; recentralización |
-| **L4** | — | — | Pago, recibo, factura; nómina/auditoría | Composición leaky; `simulations/disclosure-composition` vacío |
+| **L4** | — | disclosure-composition (stub) | Pago, recibo, factura; nómina/auditoría | Composición leaky; stub no produce métricas |
 
 ---
 
@@ -28,13 +28,13 @@
 
 | Componente | Existe | Ubicación |
 |------------|--------|-----------|
-| L1 base | Sí | `src/coinlab/`, 97 tests |
+| L1 base | Sí | `src/coinlab/`, 108 tests |
 | L0 simulador | Sí | `simulations/provider-correlation/run_correlation_simulator.py` |
 | Light-client simulador | Sí | `simulations/light-client-leakage/run_leakage_simulator.py` |
 | DAG harness | Sí | `simulations/dag-ordering/run_nullifier_conflict_simulator.py` |
 | Supply simulador | Sí | `simulations/supply-correctness/run_supply_correctness.py` |
-| L2/L3/L4 | No | Solo conceptual en docs |
-| Disclosure simulador | No | `simulations/disclosure-composition/` solo README |
+| L2/L3 | No | Solo conceptual en docs |
+| L4 disclosure | Stub ejecutable | `simulations/disclosure-composition/run_composition_simulator.py` (stub; no grafo ni adversario; no experimento completo) |
 
 ---
 

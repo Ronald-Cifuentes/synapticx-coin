@@ -44,6 +44,7 @@ def build_and_mine_block(
         coinbase_commitment=coinbase_commitment,
         coinbase_amount=cfg.block_reward,
         coinbase_owner_secret_hash=coinbase_owner_secret_hash,
+        coinbase_nonce=coinbase_note.nonce,
     )
     ok, err = chain.add_block(block, coinbase_owner=miner_address)
     if not ok:

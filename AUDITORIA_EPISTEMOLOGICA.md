@@ -8,9 +8,9 @@
 
 | Categoría | Contenido |
 |-----------|-----------|
-| **Implementado** | Cadena lineal PoW, notas/commitments/nullifiers, conservación, config constitucional, block/tx integridad, mempool, CLI, 96 tests, 4 conformance, 6 simulaciones ejecutables |
-| **Parcial** | Conformance: fixture válido + invalid-cases en tests; vectors/ e invalid-cases/ como JSON no existen |
-| **Scaffold** | research/* (solo READMEs); conformance/vectors/, conformance/invalid-cases/ (carpetas con .gitkeep) |
+| **Implementado** | Cadena lineal PoW, notas/commitments/nullifiers, conservación, config constitucional, block/tx integridad, mempool, CLI, 108 tests, 5 conformance, 6 simulaciones + 1 stub |
+| **Parcial** | Conformance: fixture 2 bloques + invalid-case JSON input_inexistente.json; vectors/ vacío |
+| **Scaffold** | research/* (RESEARCH_ITEM + READMEs); conformance/vectors/ vacío |
 | **Investigación abierta** | blockDAG, ZK real, privacidad de red, light client privado, disclosure composición, stable unit |
 
 ---
@@ -21,12 +21,12 @@
 
 ```
 pytest tests/ -v --tb=no -q
-# 96 passed in 0.82s
+# 108 passed
 ```
 
 | Archivo | Tests | Estado |
 |---------|-------|--------|
-| test_conformance.py | 4 | PASS |
+| test_conformance.py | 5 | PASS |
 | test_config_constitutional.py | 5 | PASS |
 | test_block_integrity.py | 8 | PASS |
 | test_tx_payload_integrity.py | 7 | PASS |
@@ -49,7 +49,7 @@ pytest tests/ -v --tb=no -q
 | test_config_compatibility_bug.py | 6 | PASS |
 | test_wallet_partial_state.py | 2 | PASS |
 
-**Evidencia:** `pytest tests/ -v` → 96 passed.
+**Evidencia:** `pytest tests/ -v` → 108 passed.
 
 ---
 
@@ -72,12 +72,11 @@ pytest tests/ -v --tb=no -q
 
 | Elemento | Estado | Evidencia |
 |----------|--------|-----------|
-| fixtures/valid_chain/ | Existe | config.json, blocks.json |
-| invalid-cases | En tests, no en JSON | test_invalid_input_inexistente_rejected, test_invalid_reuse_commitment_rejected, test_invalid_block_header_difficulty_rejected |
+| fixtures/valid_chain/ | Existe | config.json, blocks.json (2 bloques) |
+| invalid-cases | En tests + input_inexistente.json | test_invalid_*; test_invalid_case_input_inexistente_from_json |
 | vectors/ | Vacío (solo README) | supply-*.json, ordering-*.json bloqueados hasta ZK y DAG |
-| invalid-cases/ (carpeta) | Vacía (.gitkeep) | No hay archivos JSON de casos inválidos |
 
-**Evidencia:** `pytest tests/test_conformance.py -v` → 4 passed.
+**Evidencia:** `pytest tests/test_conformance.py -v` → 5 passed.
 
 ---
 
@@ -98,12 +97,9 @@ pytest tests/ -v --tb=no -q
 
 ### 2.5 disclosure-composition
 
-```
-simulations/disclosure-composition/README.md:
-"Reconstrucción de grafo con N pruebas de disclosure no está implementada."
-```
+**Stub ejecutable:** `run_composition_simulator.py`. Experimento completo no implementado: no modela grafo ni adversario; no produce métricas.
 
-**Evidencia:** No hay run_*.py. Solo README que declara no implementado.
+**Evidencia:** Stub ejecutable; experimento completo no implementado.
 
 ---
 
@@ -119,11 +115,11 @@ simulations/disclosure-composition/README.md:
 | Block hash autentica coinbase | SÍ | test_block_integrity |
 | tx_id = H(payload) | SÍ | test_tx_payload_integrity |
 | Reorg por trabajo acumulado | SÍ | test_short_reorg |
-| Mempool rechaza inputs inexistentes y nullifier conflict | SÍ | test_conformance, test_double_spend |
+| Mempool rechaza inputs inexistentes, tx_id inválido y nullifier conflict | SÍ | test_conformance, test_double_spend, test_mempool_tx_id_integrity |
 | CLI: init-chain, create-wallet, mint-demo-notes, etc. | SÍ | `python -m coinlab.cli --help` |
-| 96 tests | SÍ | pytest tests/ → 96 passed |
+| 108 tests | SÍ | pytest tests/ → 108 passed |
 | Simulaciones: supply, mining, double spend | SÍ | Ejecutadas |
-| Conformance: fixture válido + invalid-cases | SÍ | Fixture existe; invalid-cases en tests (no JSON) |
+| Conformance: fixture válido + invalid-cases | SÍ | Fixture 2 bloques; invalid-cases en tests + input_inexistente.json |
 
 **Ningún claim del README contradice el código.** La documentación es correcta respecto al estado actual.
 
@@ -138,8 +134,8 @@ simulations/disclosure-composition/README.md:
 | Privacidad de red | No hay capa de red. |
 | Light client privado | Solo simulador de leakage (harness). |
 | Conformance vectors JSON | vectors/ vacío; supply-*.json, ordering-*.json bloqueados. |
-| invalid-cases como JSON | invalid-cases/ vacío; casos en tests. |
-| disclosure-composition | No implementado (README explícito). |
+| invalid-cases como JSON | input_inexistente.json existe; casos también en tests. |
+| disclosure-composition | Stub ejecutable; experimento completo no implementado. |
 | Stable unit | Solo research lab (README). |
 
 ---
@@ -162,11 +158,11 @@ pip install -e ".[dev]"
 
 # Tests
 pytest tests/ -v
-# 96 passed
+# 108 passed
 
 # Conformance
 pytest tests/test_conformance.py -v
-# 4 passed
+# 5 passed
 
 # Simulaciones
 python simulations/supply-correctness/run_supply_correctness.py
@@ -194,7 +190,7 @@ python -m coinlab.cli run-demo
 
 ## 8. CRITERIO DE ÉXITO (CUMPLIDO)
 
-- **MVP de laboratorio duro y coherente:** SÍ. 96 tests, 6 simulaciones, conformance, auditoría correctiva aplicada.
+- **MVP de laboratorio duro y coherente:** SÍ. 108 tests, 6 simulaciones + 1 stub, conformance, auditoría correctiva aplicada.
 - **Separación implementación vs ambición:** SÍ. Este documento.
 - **Programa de investigación explícito:** SÍ. research/*, simulations/*, kill criteria en simuladores.
 - **Auditoría que diga qué existe y qué no:** SÍ. Este documento.

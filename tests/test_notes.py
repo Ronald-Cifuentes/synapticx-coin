@@ -31,8 +31,9 @@ def test_note_commitment_stable():
 
 
 def test_note_commitment_different_for_different_params():
-    n1 = create_note("alice", 50, "BASE", nonce="a", secret="x")
-    n2 = create_note("bob", 50, "BASE", nonce="a", secret="x")
+    """Commitment = H(owner_secret_hash|amount|asset_id|nonce); distinto secret → distinto commitment."""
+    n1 = create_note("alice", 50, "BASE", nonce="a", secret="secret_alice")
+    n2 = create_note("bob", 50, "BASE", nonce="a", secret="secret_bob")
     assert n1.commitment() != n2.commitment()
 
 

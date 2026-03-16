@@ -5,7 +5,7 @@ Ruta segura por defecto: add_transaction_validated(tx, chain_state).
 
 from typing import Dict, List, Optional, Set, TYPE_CHECKING
 
-from .transactions import PrivateTransaction, validate_transaction_basic
+from .transactions import PrivateTransaction, validate_transaction_basic, verify_tx_id
 
 if TYPE_CHECKING:
     from .state import ChainState
@@ -25,8 +25,12 @@ class Mempool:
     ) -> tuple[bool, Optional[str]]:
         """
         Ruta SEGURA: valida tx contra estado canónico.
-        Usa can_apply_transaction: autorización, amount/asset desde estado, nullifier derivado.
+        Verifica tx_id == H(payload), estructura, autorización, amount/asset desde estado.
+        Mismo contrato mínimo que validate_block para rechazar temprano.
         """
+        ok, err = verify_tx_id(tx)
+        if not ok:
+            return False, err
         ok, err = validate_transaction_basic(tx)
         if not ok:
             return False, err
@@ -72,9 +76,16 @@ class Mempool:
         available_commitments: Optional[Set[str]] = None,
     ) -> tuple[bool, Optional[str]]:
         """
-        DEPRECADO para flujo normal: usa add_transaction_validated(tx, chain_state).
-        Mantenido para compatibilidad; requiere available_commitments para seguridad.
+        DEPRECADO: usa add_transaction_validated(tx, chain_state).
+        Verifica verify_tx_id y validate_transaction_basic; no valida contra estado.
+        Uso controlado: tests/simulaciones que pasan available_commitments explícitamente.
         """
+        ok, err = verify_tx_id(tx)
+        if not ok:
+            return False, err
+        ok, err = validate_transaction_basic(tx)
+        if not ok:
+            return False, err
         return self._add_transaction_internal(
             tx,
             used_nullifiers=used_nullifiers,

@@ -16,6 +16,7 @@ from coinlab.transactions import (
     TransactionInput,
     TransactionOutput,
     create_transfer_with_output_notes,
+    tx_id_from_payload,
 )
 from coinlab.types import CommitmentHash, TxId
 
@@ -39,6 +40,7 @@ def test_tx_with_nonexistent_input_commitment_fails():
         amount=50,
         asset_id="BASE",
         owner_secret_hash=owner_secret_hash(""),
+                nonce="x",
     )
     tx = PrivateTransaction(
         tx_id=TxId("fake_tx_1"),
@@ -57,14 +59,17 @@ def test_block_with_inflated_coinbase_fails():
     chain = Blockchain(config)
     chain.create_genesis("faucet")
     # Bloque válido en PoW pero con coinbase 999
+    cb_note = create_note("miner", config.block_reward, "BASE")
     block = mine_block(
         prev_hash=chain.tip_hash(),
         merkle_root=hash_hex(""),
         timestamp=1,
         difficulty=config.difficulty,
         transactions=[],
-        coinbase_commitment=hash_hex("x"),
+        coinbase_commitment=cb_note.commitment(),
         coinbase_amount=999,
+        coinbase_owner_secret_hash=owner_secret_hash(cb_note.secret),
+        coinbase_nonce=cb_note.nonce,
     )
     ok, err = chain.add_block(block)
     assert not ok
@@ -81,14 +86,17 @@ def test_block_with_wrong_merkle_root_fails():
     )
     correct_root = compute_merkle_root([tx])
     wrong_root = hash_hex("wrong_merkle")
+    cb_note = create_note("miner", config.block_reward, "BASE")
     block2 = mine_block(
         prev_hash=chain.tip_hash(),
         merkle_root=wrong_root,
         timestamp=1,
         difficulty=config.difficulty,
         transactions=[tx],
-        coinbase_commitment=hash_hex("y"),
+        coinbase_commitment=cb_note.commitment(),
         coinbase_amount=config.block_reward,
+        coinbase_owner_secret_hash=owner_secret_hash(cb_note.secret),
+        coinbase_nonce=cb_note.nonce,
     )
     ok, err = chain.add_block(block2)
     assert not ok
@@ -141,18 +149,22 @@ def test_validate_chain_rejects_hidden_monetary_invalidity():
                 amount=50,
                 asset_id="BASE",
                 owner_secret_hash=owner_secret_hash(""),
+                nonce="x",
             )
         ],
         fee=0,
     )
+    cb_note = create_note("miner", config.block_reward, "BASE")
     bad_block = mine_block(
         prev_hash=chain.tip_hash(),
         merkle_root=compute_merkle_root([fake_tx]),
         timestamp=1,
         difficulty=config.difficulty,
         transactions=[fake_tx],
-        coinbase_commitment=hash_hex("cb"),
+        coinbase_commitment=cb_note.commitment(),
         coinbase_amount=config.block_reward,
+        coinbase_owner_secret_hash=owner_secret_hash(cb_note.secret),
+        coinbase_nonce=cb_note.nonce,
     )
     ok, _ = chain.add_block(bad_block)
     assert not ok
@@ -166,6 +178,7 @@ def test_mempool_rejects_nonexistent_input_tx():
     config = Config(difficulty=2)
     chain = Blockchain(config)
     chain.create_genesis("faucet")
+    out_note = create_note("", 50, "BASE")
     fake_input = TransactionInput(
         commitment=CommitmentHash(hash_hex("fake")),
         nullifier=hash_hex("nf"),
@@ -174,22 +187,24 @@ def test_mempool_rejects_nonexistent_input_tx():
         secret="fake",
     )
     tx = PrivateTransaction(
-        tx_id=TxId("fake_tx"),
+        tx_id=TxId(""),
         inputs=[fake_input],
         outputs=[
             TransactionOutput(
-                commitment=CommitmentHash(hash_hex("o")),
+                commitment=out_note.commitment(),
                 amount=50,
                 asset_id="BASE",
-                owner_secret_hash=owner_secret_hash(""),
+                owner_secret_hash=owner_secret_hash(out_note.secret),
+                nonce=out_note.nonce,
             )
         ],
         fee=0,
     )
+    tx.tx_id = tx_id_from_payload(tx)
     mempool = Mempool()
     ok, err = mempool.add_transaction_validated(tx, chain.state)
     assert not ok
-    assert "inexistente" in err or "Input" in err
+    assert "inexistente" in err or "Input" in err or "input" in err.lower()
 
 
 def test_coinbase_total_matches_policy_over_chain():
@@ -216,14 +231,17 @@ def test_merkle_root_is_recomputed_during_validation():
         [faucet_note], [50, 50], ["a", "b"], fee=0
     )
     real_root = compute_merkle_root([tx])
+    cb_note = create_note("miner", config.block_reward, "BASE")
     block2 = mine_block(
         prev_hash=chain.tip_hash(),
         merkle_root=real_root,
         timestamp=1,
         difficulty=config.difficulty,
         transactions=[tx],
-        coinbase_commitment=hash_hex("x"),
+        coinbase_commitment=cb_note.commitment(),
         coinbase_amount=config.block_reward,
+        coinbase_owner_secret_hash=owner_secret_hash(cb_note.secret),
+        coinbase_nonce=cb_note.nonce,
     )
     ok, err = validate_block(block2, 1, config)
     assert ok

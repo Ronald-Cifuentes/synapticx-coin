@@ -14,7 +14,7 @@ from .blocks import (
     expected_block_reward,
 )
 from .config import Config, chain_params_hash
-from .crypto_primitives import hash_hex, owner_secret_hash
+from .crypto_primitives import commitment_for_output, hash_hex, owner_secret_hash
 from .pow import cumulative_work, mine_block, validate_block_pow
 from .state import ChainState
 from .transactions import PrivateTransaction, validate_transaction_basic, verify_tx_id
@@ -38,6 +38,9 @@ def validate_block(
     exp_diff = expected_block_difficulty(height, config)
     if block.header.difficulty != exp_diff:
         return False, f"Difficulty incoherente: header={block.header.difficulty}, policy={exp_diff}"
+    cb_nonce = getattr(block, "coinbase_nonce", "") or ""
+    if not cb_nonce:
+        return False, "Formato legado: coinbase sin nonce; commitment no verificable"
     if not validate_block_pow(block, exp_diff):
         return False, "PoW inválido"
     expected_root = compute_merkle_root(block.transactions)
@@ -46,6 +49,17 @@ def validate_block(
     expected_reward = expected_block_reward(height, config)
     if block.coinbase_amount != expected_reward:
         return False, f"Coinbase inválida: {block.coinbase_amount} != {expected_reward}"
+    expected_cb = commitment_for_output(
+        block.coinbase_owner_secret_hash or "",
+        block.coinbase_amount,
+        config.default_asset_id,
+        cb_nonce,
+    )
+    if block.coinbase_commitment != expected_cb:
+        return False, (
+            f"Coinbase commitment no deriva de metadata: "
+            f"esperado H(owner_secret_hash|amount|asset_id|nonce)"
+        )
     has_conflict, err = block_has_internal_nullifier_conflict(block.transactions)
     if has_conflict:
         return False, err or "Nullifier duplicado en bloque"
@@ -93,6 +107,7 @@ class Blockchain:
             coinbase_commitment=coinbase_commitment,
             coinbase_amount=self.config.block_reward,
             coinbase_owner_secret_hash=owner_secret_hash(faucet_note.secret),
+            coinbase_nonce=faucet_note.nonce,
             chain_params_hash=chain_params_hash(self.config),
         )
         ok, err = self.add_block(block, coinbase_owner=faucet_address)

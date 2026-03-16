@@ -19,6 +19,7 @@ from coinlab.transactions import (
     TransactionInput,
     TransactionOutput,
     create_transfer_with_output_notes,
+    tx_id_from_payload,
 )
 from coinlab.types import CommitmentHash, TxId
 
@@ -48,8 +49,9 @@ def test_invalid_input_inexistente_rejected():
     chain = Blockchain(config)
     chain.create_genesis("faucet")
     mempool = Mempool()
+    out_note = create_note("", 50, "BASE")
     fake_tx = PrivateTransaction(
-        tx_id=TxId("fake"),
+        tx_id=TxId(""),
         inputs=[
             TransactionInput(
                 commitment=CommitmentHash(hash_hex("input_inexistente")),
@@ -61,17 +63,19 @@ def test_invalid_input_inexistente_rejected():
         ],
         outputs=[
             TransactionOutput(
-                commitment=CommitmentHash(hash_hex("out")),
+                commitment=out_note.commitment(),
                 amount=50,
                 asset_id="BASE",
-                owner_secret_hash=owner_secret_hash(""),
+                owner_secret_hash=owner_secret_hash(out_note.secret),
+                nonce=out_note.nonce,
             )
         ],
         fee=0,
     )
+    fake_tx.tx_id = tx_id_from_payload(fake_tx)
     ok, err = mempool.add_transaction_validated(fake_tx, chain.state)
     assert not ok
-    assert "inexistente" in err or "Input" in err
+    assert "inexistente" in err or "Input" in err or "input" in err.lower()
 
 
 def test_invalid_reuse_commitment_rejected():
@@ -101,6 +105,7 @@ def test_invalid_reuse_commitment_rejected():
                 amount=50,
                 asset_id="BASE",
                 owner_secret_hash=owner_secret_hash("attacker"),
+                nonce="x",
             )
         ],
         fee=0,
@@ -134,14 +139,17 @@ def test_invalid_block_header_difficulty_rejected():
     config = Config(difficulty=2)
     chain = Blockchain(config)
     chain.create_genesis("faucet")
+    cb_note = create_note("miner", config.block_reward, "BASE")
     block = mine_block(
         prev_hash=chain.tip_hash(),
         merkle_root=hash_hex(""),
         timestamp=1,
         difficulty=4,
         transactions=[],
-        coinbase_commitment=hash_hex("x"),
+        coinbase_commitment=cb_note.commitment(),
         coinbase_amount=config.block_reward,
+        coinbase_owner_secret_hash=owner_secret_hash(cb_note.secret),
+        coinbase_nonce=cb_note.nonce,
     )
     ok, err = validate_block(block, 1, config)
     assert not ok

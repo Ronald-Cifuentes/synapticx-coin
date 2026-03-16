@@ -34,7 +34,7 @@
 
 | Archivo | Tests | Descripción |
 |---------|-------|-------------|
-| test_conformance.py | 4 | Fixture válido, invalid input, reuse commitment, block difficulty |
+| test_conformance.py | 5 | Fixture válido, invalid input, reuse commitment, block difficulty, invalid-case JSON |
 | test_config_constitutional.py | 5 | Manipulación config, legacy, config_for_chain |
 | test_block_integrity.py | 8 | Alteración coinbase, chain_params, prev_hash |
 | test_tx_payload_integrity.py | 7 | Alteración payload, tx_id derivado |
@@ -57,7 +57,7 @@
 | test_config_compatibility_bug.py | 6 | Bug default_asset_id, fix |
 | test_wallet_partial_state.py | 2 | Cache no reconciliado |
 
-**Total:** 22 archivos, 96 tests.
+**Total:** 24 archivos, 108 tests.
 
 ---
 
@@ -68,7 +68,7 @@
 | fixtures/valid_chain/config.json | Fixture real | difficulty, block_reward, default_asset_id |
 | fixtures/valid_chain/blocks.json | Fixture real | Genesis con chain_params_hash, coinbase |
 | fixtures/.gitkeep | Scaffold | Vacío |
-| invalid-cases/ | Scaffold | Solo .gitkeep, sin JSON |
+| invalid-cases/ | Fixture real | input_inexistente.json |
 | vectors/ | Scaffold | Solo .gitkeep + README; sin supply-*.json, ordering-*.json |
 | README.md | Documentación | Propósito, estructura |
 
@@ -84,7 +84,7 @@
 | light-client-leakage | run_leakage_simulator.py | README.md | Ejecutable |
 | provider-correlation | run_correlation_simulator.py | README.md | Ejecutable |
 | dag-ordering | run_nullifier_conflict_simulator.py | README.md | Ejecutable |
-| disclosure-composition | — | README.md ("No implementado aún") | No ejecutable |
+| disclosure-composition | run_composition_simulator.py (stub) | README.md | Stub ejecutable; experimento completo no implementado |
 
 ---
 
@@ -126,7 +126,7 @@
 | generate_conformance_fixture.py | Ejecutable | Genera fixtures/valid_chain |
 | run_demo.sh | Ejecutable | python -m coinlab.cli run-demo |
 | run_tests.sh | Ejecutable | pytest tests/ |
-| run_research_simulations.sh | Ejecutable | 3 simuladores (light-client, provider, dag) |
+| run_research_simulations.sh | Ejecutable | 4 scripts (3 simuladores + 1 stub: light-client, provider, dag, disclosure-composition) |
 | check-dependency-map/check.sh | Ejecutable | Check deps |
 | generate-research-index/generate.sh | Ejecutable | Índice research |
 | lint-docs/lint.sh | Ejecutable | Lint docs |
@@ -144,10 +144,10 @@ Documentación raíz. Claims verificables en sección 3.
 | Categoría | Elementos |
 |-----------|-----------|
 | **Código ejecutable real** | 15 módulos src/coinlab/*.py |
-| **Tests reales** | 96 tests en 22 archivos |
+| **Tests reales** | 108 tests en 24 archivos |
 | **Fixtures reales** | conformance/fixtures/valid_chain/{config,blocks}.json |
-| **Simuladores ejecutables** | 6 scripts en simulations/ (supply, mining, double-spend, light-client, provider, dag) |
-| **README/scaffolding** | research/* (solo READMEs), conformance/vectors/, conformance/invalid-cases/, simulations/disclosure-composition |
+| **Simuladores ejecutables** | 6 simuladores + 1 stub en simulations/ (supply, mining, double-spend, light-client, provider, dag, disclosure-composition) |
+| **README/scaffolding** | research/* (RESEARCH_ITEM + READMEs), conformance/vectors/ |
 | **Documentación conceptual** | docs/*, README.md |
 
 ---
@@ -166,7 +166,7 @@ Documentación raíz. Claims verificables en sección 3.
 | **mempool safety** | sí | mempool.py:add_transaction_validated valida contra chain_state. Rechaza inputs inexistentes, nullifier conflict. test_conformance, test_critical_validation, test_atomicity | Bajo | no-problema para MVP |
 | **restart/reload correctness** | sí | cli._load_chain usa config_for_chain. store.config_compatible_with_blocks. test_restart_reload, test_config_persistence | Bajo | no-problema para MVP |
 | **wallet cache vs canonical state** | parcial | wallets.json es cache; no reconcile ni rescan. README lo declara. test_wallet_partial_state documenta que cache no se reconcilia | Desincronización silenciosa si edición manual | deuda técnica |
-| **conformance fixtures** | parcial | Fixture válido existe y se valida. invalid-cases en tests (no JSON). vectors/ vacío | Fixture legado sin chain_params_hash fallaría; script regenera | inconsistencia documental menor |
+| **conformance fixtures** | parcial | Fixture 2 bloques; invalid-cases en tests + input_inexistente.json; vectors/ vacío | vectors bloqueados hasta ZK/DAG | inconsistencia documental menor |
 | **research simulations** | sí | 6 simuladores ejecutables. Harnesses de hipótesis, no prototipos | Ninguno para MVP | no-problema para MVP |
 | **docs vs code alignment** | sí | README claims verificados. docs/ no afirman implementación cerrada | Ninguno | no-problema para MVP |
 
@@ -179,8 +179,8 @@ Documentación raíz. Claims verificables en sección 3.
 - README: "Config anclada en ledger" → config_for_chain, chain_params_hash
 - README: "Block hash autentica coinbase" → block_hash incluye coinbase
 - README: "tx_id = H(payload)" → tx_id_from_payload, verify_tx_id
-- README: "96 tests" → pytest: 96 passed
-- README: "Conformance: fixture válido + invalid-cases" → test_conformance (invalid-cases en tests, no JSON)
+- README: "108 tests" → pytest: 108 passed
+- README: "Conformance: fixture válido + invalid-cases" → test_conformance (invalid-cases en tests + input_inexistente.json)
 
 ### Claims que están POR ENCIMA de lo demostrado
 
@@ -189,14 +189,14 @@ Documentación raíz. Claims verificables en sección 3.
 | README "Siguientes pasos": "Añadir más vectores a conformance/" | Implica vectores como siguiente paso natural | vectors/ vacío; supply-*.json, ordering-*.json bloqueados hasta ZK/DAG |
 | docs/04_testplans/TP-001 | "conformance/vectors/ordering-*.json", "conformance/fixtures/dag-conflicts/" | No existen. DAG no implementado |
 | docs/04_testplans/TP-002 | "conformance/vectors/supply-*.json", "conformance/invalid-cases/inflation-*.json" | No existen. ZK no implementado |
-| simulations/README | "Los resultados deben alimentar conformance/vectors y conformance/invalid-cases" | Normativo futuro; vectors e invalid-cases como JSON no existen |
+| simulations/README | "Los resultados deben alimentar conformance/vectors y conformance/invalid-cases" | Normativo futuro; vectors vacío; invalid-cases tiene input_inexistente.json |
 | research/consensus-lab | "Harness ejecutable: run_nullifier_conflict_simulator" | Harness existe; DAG no. Lab no implementa DAG |
 
 **Nota:** Los testplans y research declaran "artifacts esperados" o "cuando DAG exista". No afirman que existan hoy. La contradicción es leve: la documentación proyecta artefactos que el repo no produce aún.
 
 ### Claims que podrían malinterpretarse
 
-- "Conformance: fixture válido + invalid-cases" — Los invalid-cases están en tests, no en conformance/invalid-cases/*.json. El README es correcto si se entiende "invalid-cases" como casos cubiertos por tests.
+- "Conformance: fixture válido + invalid-cases" — invalid-cases en tests + input_inexistente.json en conformance/invalid-cases/.
 
 ---
 
@@ -209,7 +209,7 @@ Documentación raíz. Claims verificables en sección 3.
 ### B. Debe endurecerse con tests/fixtures
 
 1. **test_valid_fixture_loads_and_validates** no usa config_for_chain; usa load_config + config_compatible_with_blocks. Funcionalmente equivalente (ambos verifican chain_params_hash). Opcional: alinear con _load_chain usando config_for_chain para consistencia.
-2. **conformance/invalid-cases/** como JSON: los tests construyen casos programáticamente. Añadir 1–2 JSON de invalid-case como golden sería endurecimiento, no obligatorio.
+2. **conformance/invalid-cases/**: input_inexistente.json ya existe. Tests construyen casos programáticamente también.
 3. **Fixture con múltiples bloques:** El fixture actual tiene 1 bloque (genesis). Un fixture con 2–3 bloques y txs ejercitaría mejor la cadena de prev_hash.
 
 ### C. No debe implementarse todavía; debe ser experimento/harness
@@ -218,7 +218,7 @@ Documentación raíz. Claims verificables en sección 3.
 - ZK real (circuitos, proofs)
 - conformance/vectors/supply-*.json (bloqueado hasta ZK)
 - conformance/vectors/ordering-*.json (bloqueado hasta DAG)
-- disclosure-composition (README: no implementado)
+- disclosure-composition (stub ejecutable; experimento completo no implementado)
 - Privacidad de red
 - Light client privado (simulador existe como harness)
 - Stable unit
@@ -243,7 +243,7 @@ Documentación raíz. Claims verificables en sección 3.
    - Un invalid-case JSON en conformance/invalid-cases/ como golden (ej. input_inexistente.json) para documentar formato.
 
 3. **Documentación:**
-   - Añadir una línea en README o conformance/README aclarando que invalid-cases viven en tests; conformance/invalid-cases/ como JSON es futuro.
+   - conformance/README ya documenta invalid-cases (tests + input_inexistente.json).
    - Revisar docs/04_testplans para que "artifacts esperados" lleve explícitamente "(pendiente ZK/DAG)".
 
 4. **No abrir:**

@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from typing import List, Optional, Set
 
 from .config import Config
-from .crypto_primitives import hash_hex
+from .crypto_primitives import commitment_for_output, hash_hex
 from .transactions import PrivateTransaction
 from .types import BlockHash
 
@@ -93,8 +93,9 @@ class Block:
     transactions: List[PrivateTransaction]
     coinbase_commitment: str
     coinbase_amount: int
-    coinbase_owner_secret_hash: str = ""  # hash(secret) para autorización de gasto
-    chain_params_hash: Optional[str] = None  # H(config) anclado en genesis; verifica integridad constitucional
+    coinbase_owner_secret_hash: str = ""
+    coinbase_nonce: str = ""  # Obligatorio: commitment = H(owner_secret_hash|amount|asset_id|nonce)
+    chain_params_hash: Optional[str] = None
 
     def block_hash(self) -> BlockHash:
         """
@@ -103,6 +104,7 @@ class Block:
         """
         cph = getattr(self, "chain_params_hash", None) or ""
         owner = getattr(self, "coinbase_owner_secret_hash", "") or ""
+        cb_nonce = getattr(self, "coinbase_nonce", "") or ""
         payload = (
             f"{self.header.prev_hash}|"
             f"{self.header.merkle_root}|"
@@ -112,6 +114,7 @@ class Block:
             f"{self.coinbase_commitment}|"
             f"{self.coinbase_amount}|"
             f"{owner}|"
+            f"{cb_nonce}|"
             f"{cph}"
         )
         return BlockHash(hash_hex(payload))

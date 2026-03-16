@@ -42,6 +42,7 @@ def mine_block(
     coinbase_commitment: str,
     coinbase_amount: int,
     coinbase_owner_secret_hash: str = "",
+    coinbase_nonce: str = "",
     chain_params_hash: str | None = None,
 ) -> Block:
     """
@@ -65,6 +66,7 @@ def mine_block(
             coinbase_commitment=coinbase_commitment,
             coinbase_amount=coinbase_amount,
             coinbase_owner_secret_hash=coinbase_owner_secret_hash,
+            coinbase_nonce=coinbase_nonce,
             chain_params_hash=chain_params_hash or None,
         )
         h = block.block_hash()

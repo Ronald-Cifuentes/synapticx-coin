@@ -12,8 +12,9 @@ from coinlab.store import Store
 
 def test_bug_default_asset_id_mismatch_corrupts_state_BEFORE_FIX(tmp_path: Path):
     """
-    BUG (antes de corrección): Recargar con default_asset_id distinto reconstruye
-    coinbase con asset incorrecto. validate_chain pasa; estado corrupto.
+    BUG (antes de corrección): Recargar con default_asset_id distinto reconstruía
+    coinbase con asset incorrecto. Tras fix de commitment: add_block falla porque
+    coinbase_commitment no deriva de metadata con asset_id distinto.
     """
     store = Store(tmp_path)
     config_orig = Config(difficulty=2, block_reward=100, default_asset_id="BASE")
@@ -27,12 +28,10 @@ def test_bug_default_asset_id_mismatch_corrupts_state_BEFORE_FIX(tmp_path: Path)
     config_wrong = Config(difficulty=2, block_reward=100, default_asset_id="FAKE")
     store.save_config(config_wrong)
     chain2 = Blockchain(config_wrong)
-    for block in store.load_blocks():
-        ok, err = chain2.add_block(block)
-        assert ok, err
-    asset_after = chain2.state.notes[genesis_comm].asset_id
-    assert asset_after == "FAKE"
-    assert asset_after != "BASE"
+    blocks = store.load_blocks()
+    ok, err = chain2.add_block(blocks[0])
+    assert not ok
+    assert "commitment" in err.lower() or "deriva" in err.lower()
 
 
 def test_FIX_reject_config_override_with_different_default_asset_id(tmp_path: Path):

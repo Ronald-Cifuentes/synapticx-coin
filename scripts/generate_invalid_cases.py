@@ -7,7 +7,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from coinlab.crypto_primitives import hash_hex, owner_secret_hash
+from coinlab.crypto_primitives import commitment_for_output, hash_hex, owner_secret_hash
 from coinlab.transactions import (
     PrivateTransaction,
     TransactionInput,
@@ -36,6 +36,7 @@ def _serialize_tx(tx: PrivateTransaction) -> dict:
                 "amount": o.amount,
                 "asset_id": o.asset_id,
                 "owner_secret_hash": o.owner_secret_hash,
+                "nonce": getattr(o, "nonce", "") or "",
             }
             for o in tx.outputs
         ],
@@ -48,6 +49,8 @@ def main():
     out_dir.mkdir(parents=True, exist_ok=True)
 
     # input_inexistente: tx con commitment que no está en estado
+    osh = owner_secret_hash("")
+    out_comm = commitment_for_output(osh, 50, "BASE", "invalid_nonce")
     tx = PrivateTransaction(
         tx_id=TxId(""),
         inputs=[
@@ -61,10 +64,11 @@ def main():
         ],
         outputs=[
             TransactionOutput(
-                commitment=CommitmentHash(hash_hex("out")),
+                commitment=CommitmentHash(out_comm),
                 amount=50,
                 asset_id="BASE",
-                owner_secret_hash=owner_secret_hash(""),
+                owner_secret_hash=osh,
+                nonce="invalid_nonce",
             )
         ],
         fee=0,

@@ -4,7 +4,7 @@
 
 ## 1. RESUMEN EJECUTIVO BRUTAL
 
-El MVP es un **laboratorio de cadena lineal PoW con notas privadas** que demuestra conservación, integridad constitucional y rechazo de mutaciones silenciosas. No es criptomoneda de producción. No hay ZK real, no hay privacidad de red, no hay light client viable, no hay blockDAG, no hay unidad estable. La ambición de "verdadera criptomoneda" depende de resolver bloqueantes que nadie ha cerrado. El techo honesto hoy es Monero endurecido con mejor transporte; el resto es investigación abierta o especulación.
+El MVP es un **laboratorio de cadena lineal PoW con notas privadas** que demuestra conservación, integridad constitucional endurecida (tests documentan rechazo de mutaciones) y rechazo de mutaciones silenciosas. No es criptomoneda de producción. No hay ZK real, no hay privacidad de red, no hay light client viable, no hay blockDAG, no hay unidad estable. La ambición de "verdadera criptomoneda" depende de resolver bloqueantes que nadie ha cerrado. El techo honesto hoy es Monero endurecido con mejor transporte; el resto es investigación abierta o especulación.
 
 ---
 
@@ -90,7 +90,7 @@ IOTA prioriza eficiencia y coordinación sobre anonimato. Identidad verificable,
 
 ## 6. QUÉ SERÍA HONESTO CONSTRUIR HOY
 
-1. **L1 base endurecida:** ya está. Cadena lineal, notas, nullifiers, integridad constitucional.
+1. **L1 base endurecida:** ya está. Cadena lineal, notas, nullifiers, integridad constitucional (tests; no verificación formal).
 2. **Conformance:** fixture multi-bloque, invalid-cases; ya está.
 3. **Research ejecutable:** RESEARCH_ITEM, simuladores, kill criteria; ya está.
 4. **No construir:** blockDAG, ZK real, light client, unit estable, disclosure amplio como si estuvieran cerrados.
@@ -131,17 +131,17 @@ IOTA prioriza eficiencia y coordinación sobre anonimato. Identidad verificable,
 
 | Área | Estado | Evidencia | Comentario brutal |
 |------|--------|----------|-------------------|
-| Integridad del bloque | Cerrado | blocks.block_hash, test_block_integrity | Coinbase + chain_params en hash; alterar rompe prev_hash |
-| Integridad payload tx | Cerrado | tx_id_from_payload, verify_tx_id, test_tx_payload_integrity | Alterar payload invalida merkle |
-| Atomicidad | Cerrado | chain.add_block temp_state, test_atomicity | add_block y reorg atómicos |
-| Restart/reload | Cerrado | config_for_chain, test_restart_reload | Fail-fast en config alterada |
+| Integridad del bloque | Endurecido | blocks.block_hash, test_block_integrity | Coinbase + chain_params en hash; alterar rompe prev_hash |
+| Integridad payload tx | Endurecido | tx_id_from_payload, verify_tx_id, test_tx_payload_integrity | Alterar payload invalida merkle |
+| Atomicidad | Endurecido | chain.add_block temp_state, test_atomicity | add_block y reorg atómicos |
+| Restart/reload | Endurecido | config_for_chain, test_restart_reload | Fail-fast en config alterada |
 | Wallet local | Parcial | wallets.json, test_wallet_partial_state | Cache de demo; no reconcile; no fuente canónica |
 | Conformance | Parcial | fixture 2 bloques, input_inexistente.json, 5 tests | vectors supply/ordering bloqueados |
-| Research usefulness | Parcial | RESEARCH_ITEM, 5 simuladores | Útil para estructura; no cierra bloqueantes |
+| Research usefulness | Parcial | RESEARCH_ITEM, 5 simuladores + 1 stub | Útil para estructura; no cierra bloqueantes |
 | Light-client privacy | Abierto | run_leakage_simulator | Modela amenaza; naive query 100%; diseño viable no existe |
 | Network metadata | Abierto | run_correlation_simulator | Modela gossip vs relay; no integrado |
 | Supply correctness seria | Bloqueante | run_supply_correctness, test_supply | MVP con amounts visibles; ZK no existe |
-| Consenso lineal | Cerrado | chain.py, 97 tests | PoW, reorg por trabajo |
+| Consenso lineal | Endurecido | chain.py, 108 tests | PoW, reorg por trabajo |
 | blockDAG | Abierto | run_nullifier_conflict_simulator | Harness; DAG no implementado |
 | Stable unit | Abierto | RESEARCH_ITEM | Diseño y simulador no existen |
 | Selective disclosure | Abierto | run_composition_simulator (stub) | Modelo formal no existe |
@@ -151,4 +151,4 @@ IOTA prioriza eficiencia y coordinación sobre anonimato. Identidad verificable,
 
 ## 10. FRASE FINAL OBLIGATORIA
 
-**Laboratorio de cadena lineal PoW con notas privadas y integridad constitucional cerrada; bloqueantes de supply ZK, light client y privacidad de red abiertos; techo honesto: Monero endurecido, no criptomoneda de producción.**
+**Laboratorio de cadena lineal PoW con notas privadas e integridad constitucional endurecida (tests); bloqueantes de supply ZK, light client y privacidad de red abiertos; techo honesto: Monero endurecido, no criptomoneda de producción.**

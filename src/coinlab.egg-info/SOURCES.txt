@@ -23,10 +23,12 @@ src/coinlab.egg-info/requires.txt
 src/coinlab.egg-info/top_level.txt
 tests/test_atomicity.py
 tests/test_authorization.py
+tests/test_block_integrity.py
 tests/test_chain_pow.py
 tests/test_cli_smoke.py
 tests/test_commitment_uniqueness.py
 tests/test_config_compatibility_bug.py
+tests/test_config_constitutional.py
 tests/test_config_persistence.py
 tests/test_conformance.py
 tests/test_critical_validation.py
@@ -39,4 +41,5 @@ tests/test_restart_reload.py
 tests/test_short_reorg.py
 tests/test_supply_correctness.py
 tests/test_transactions.py
+tests/test_tx_payload_integrity.py
 tests/test_wallet_partial_state.py

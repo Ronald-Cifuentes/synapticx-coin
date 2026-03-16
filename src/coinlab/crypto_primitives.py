@@ -27,6 +27,21 @@ def owner_secret_hash(secret: str) -> str:
     return hash_hex(secret)
 
 
+def commitment_for_output(
+    owner_secret_hash: str,
+    amount: int,
+    asset_id: str,
+    nonce: str,
+) -> str:
+    """
+    Genera commitment verificable para un output.
+    Fórmula: H(owner_secret_hash|amount|asset_id|nonce).
+    Permite verificar que commitment deriva criptográficamente de metadata.
+    """
+    payload = f"{owner_secret_hash}|{amount}|{asset_id}|{nonce}"
+    return hash_hex(payload)
+
+
 def commitment_for_note(
     owner_key: str,
     amount: int,
@@ -34,8 +49,8 @@ def commitment_for_note(
     asset_id: str = "BASE",
 ) -> str:
     """
-    Genera un commitment para una nota.
-    MVP: H(owner|amount|nonce|asset). En producción sería Pedersen/Poseidon.
+    DEPRECADO: usa commitment_for_output con owner_secret_hash.
+    Mantenido para transición. Note.commitment() usa owner_secret_hash(secret).
     """
     payload = f"{owner_key}|{amount}|{nonce}|{asset_id}"
     return hash_hex(payload)
