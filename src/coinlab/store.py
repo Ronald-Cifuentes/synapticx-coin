@@ -44,6 +44,11 @@ def _serialize_tx(tx: PrivateTransaction) -> Dict[str, Any]:
     }
 
 
+def deserialize_tx(d: Dict[str, Any]) -> PrivateTransaction:
+    """Deserializa tx desde dict (para conformance invalid-cases)."""
+    return _deserialize_tx(d)
+
+
 def _deserialize_tx(d: Dict[str, Any]) -> PrivateTransaction:
     return PrivateTransaction(
         tx_id=TxId(d["tx_id"]),

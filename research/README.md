@@ -2,42 +2,36 @@
 
 ## Propósito
 
-Cada lab investiga un bloqueante o hipótesis. **No** contiene implementación de protocolo final. Contiene prototipos, experimentos y harnesses para validar viabilidad.
+Cada lab investiga un bloqueante o hipótesis. **No** contiene implementación de protocolo final. Contiene experimentos y harnesses para validar viabilidad.
 
-**Rebaja epistemológica:** Simulador ≠ solución. Harness ≠ prototipo de protocolo. Target metric ≠ métrica medida. Hipótesis ≠ evidencia. Los resultados de los simuladores informan diseño, no cierran bloqueantes.
+**Rebaja epistemológica:** Simulador ≠ solución. Harness ≠ prototipo. Target metric ≠ métrica medida. Hipótesis ≠ evidencia.
 
-## Labs
+## Labs y RESEARCH_ITEM
 
-| Lab | Bloqueante/Hipótesis | Test plan |
-|-----|----------------------|-----------|
-| consensus-lab | blockDAG + ordering + privado | TP-001 |
-| privacy-lab | Supply correctness, circuitos ZK | TP-002 |
-| light-client-lab | Cliente ligero privado viable | TP-003 |
-| network-lab | Privacidad de red usable | TP-004 |
-| disclosure-lab | Composición de pruebas | TP-005 |
-| stable-unit-lab | Unidad estable sin recentralización | TP-006 |
+| Lab | Bloqueante/Hipótesis | Harness | RESEARCH_ITEM |
+|-----|----------------------|---------|---------------|
+| [light-client-lab](light-client-lab/) | Cliente ligero privado viable | `simulations/light-client-leakage/` | [RESEARCH_ITEM.md](light-client-lab/RESEARCH_ITEM.md) |
+| [network-lab](network-lab/) | Privacidad de red usable | `simulations/provider-correlation/` | [RESEARCH_ITEM.md](network-lab/RESEARCH_ITEM.md) |
+| [privacy-lab](privacy-lab/) | Supply correctness, ZK | `simulations/supply-correctness/` | [RESEARCH_ITEM.md](privacy-lab/RESEARCH_ITEM.md) |
+| [consensus-lab](consensus-lab/) | blockDAG + ordering | `simulations/dag-ordering/` | [RESEARCH_ITEM.md](consensus-lab/RESEARCH_ITEM.md) |
+| [disclosure-lab](disclosure-lab/) | Composición de pruebas | `simulations/disclosure-composition/` (stub) | [RESEARCH_ITEM.md](disclosure-lab/RESEARCH_ITEM.md) |
+| [stable-unit-lab](stable-unit-lab/) | Unidad estable sin recentralización | — (no hay harness) | [RESEARCH_ITEM.md](stable-unit-lab/RESEARCH_ITEM.md) |
 
-## Qué se investiga aquí
+## Formato RESEARCH_ITEM
 
-- **Viabilidad:** ¿Existe solución que cumpla criterios?
-- **Diseño:** Especificaciones y prototipos mínimos
-- **Métricas:** Correlación, latencia, batería, coste de verificación
+Cada lab tiene RESEARCH_ITEM.md con:
+- Question, Why it matters
+- Tasks, Deliverables
+- Acceptance, Kill/downgrade trigger
+- Dependencies, Priority
+- Harness ejecutable (o declaración explícita de ausencia)
 
-## Qué NO debe meterse aquí
+## Simuladores ejecutables
 
-- Código que parezca "mainnet-ready"
-- Implementación de protocolo final antes de cerrar bloqueantes
-- Features que asumen que los bloqueantes están resueltos
-
-## Estado
-
-Cada lab tiene:
-- Hipótesis explícita
-- Simulador o harness ejecutable (ver README de cada lab)
-- Métricas y umbrales (TP-001 a TP-006)
-- Kill criteria y downgrade paths
-
-Simuladores en `simulations/` (harnesses, no prototipos de protocolo):
-- `light-client-leakage/` — correlación por patrón de consulta
-- `provider-correlation/` — inferencia de origen (gossip vs relay)
-- `dag-ordering/` — conflicto de nullifier (harness para DAG futuro)
+| Simulador | Comando | Estado |
+|-----------|---------|--------|
+| light-client-leakage | `python simulations/light-client-leakage/run_leakage_simulator.py` | Ejecutable |
+| provider-correlation | `python simulations/provider-correlation/run_correlation_simulator.py` | Ejecutable |
+| dag-ordering | `python simulations/dag-ordering/run_nullifier_conflict_simulator.py` | Ejecutable |
+| supply-correctness | `python simulations/supply-correctness/run_supply_correctness.py` | Ejecutable |
+| disclosure-composition | `python simulations/disclosure-composition/run_composition_simulator.py` | Stub |

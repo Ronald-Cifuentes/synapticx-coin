@@ -12,5 +12,47 @@
     "coinbase_amount": 100,
     "coinbase_owner_secret_hash": "58eb71f44d4d49e33b95485bf9c612ef33bd5d15362adda4f2352d43014302e1",
     "chain_params_hash": "add4cdca262e3b8811a3717de71dea73841a98411ce7ae3aba5de3e9de0415ee"
+  },
+  {
+    "header": {
+      "prev_hash": "006ce670a53085ffc11b6072f2a2346055c004dc6a852731f3ad144217aeb7f8",
+      "merkle_root": "d7f5fc66fc583c8c0145dadaf9751424ad42cc27dd466a2a8148c8c6ecfdd3b6",
+      "timestamp": 1773679217,
+      "nonce": 224,
+      "difficulty": 2
+    },
+    "transactions": [
+      {
+        "tx_id": "6758113b24855d81383c497f6943f051ed84d909b3d9cf8194c35af04a593c17",
+        "inputs": [
+          {
+            "commitment": "b90a6e48fdcfc5e28a617e50936156e7c4365a845e8b00f6ac5bc42d32f89ccd",
+            "nullifier": "43882460c9d73103cf3d12ef58d6503c338e74e6cf6f51924f70c7fb89e8ade7",
+            "amount": 100,
+            "asset_id": "BASE",
+            "secret": "genesis_faucet_secret_mvp"
+          }
+        ],
+        "outputs": [
+          {
+            "commitment": "a25faddcba72d52b618550554d777d6773ddc93d85436f58014cd30c6d4db718",
+            "amount": 50,
+            "asset_id": "BASE",
+            "owner_secret_hash": "183f1c830c64c7f46c05eebac1a8f581c814b8ec7d04ec43de116a7ad08f87fa"
+          },
+          {
+            "commitment": "0d20ae477a195fd3ee71ed606fadd4e2086fe6b6f1d03dbdcca324b3d75aa70c",
+            "amount": 50,
+            "asset_id": "BASE",
+            "owner_secret_hash": "0b6eaa864ad2559c2964e4f6d9e8da1b1186b56f1b9531ef25a50984950cf68a"
+          }
+        ],
+        "fee": 0
+      }
+    ],
+    "coinbase_commitment": "aedd23ad5806d1b4279388e5cce581a49033d86a853e2568d444b71c1daf03ad",
+    "coinbase_amount": 100,
+    "coinbase_owner_secret_hash": "e983513495bfc44997ec5924db5f2ffbdc512494a9bf54f2d02c9c5fee0665eb",
+    "chain_params_hash": null
   }
 ]

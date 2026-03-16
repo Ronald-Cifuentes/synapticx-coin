@@ -9,14 +9,17 @@ Fixtures válidos y invalid-cases para verificar invariantes del MVP. Los tests 
 ```
 conformance/
   fixtures/
-    valid_chain/   — Genesis válido (config.json, blocks.json)
-  README.md
+    valid_chain/   — 2+ bloques (genesis + tx), config.json, blocks.json
+  invalid-cases/
+    input_inexistente.json — tx con commitment inexistente (golden)
+  vectors/        — vacío (bloqueado hasta ZK/DAG)
 ```
 
-## Cómo generar el fixture
+## Cómo generar fixtures
 
 ```bash
 python scripts/generate_conformance_fixture.py
+python scripts/generate_invalid_cases.py
 ```
 
 ## Cómo ejecutar conformance
@@ -25,15 +28,11 @@ python scripts/generate_conformance_fixture.py
 pytest tests/test_conformance.py -v
 ```
 
-## Invalid-cases (en tests)
+## Invalid-cases
 
-Los invalid-cases se ejecutan como tests:
-
-- **input inexistente:** tx con commitment que no está en estado → rechazado
-- **reuse commitment:** output que reutiliza commitment existente → rechazado
-- **block header inválido:** difficulty distinto a policy → rechazado
+- **En tests:** input inexistente, reuse commitment, block header inválido (construidos programáticamente)
+- **En JSON:** input_inexistente.json — golden para formato; test_invalid_case_input_inexistente_from_json lo carga
 
 ## Qué NO contiene aún
 
-- vectors/ (ordering, supply proofs)
-- invalid-cases/ como archivos JSON independientes
+- vectors/ (ordering, supply proofs) — bloqueado hasta ZK y DAG

@@ -2,6 +2,7 @@
 Tests de conformance: fixture válido e invalid-cases.
 """
 
+import json
 import pytest
 from pathlib import Path
 
@@ -12,7 +13,7 @@ from coinlab.crypto_primitives import hash_hex, owner_secret_hash
 from coinlab.mempool import Mempool
 from coinlab.notes import create_note
 from coinlab.pow import mine_block
-from coinlab.store import Store
+from coinlab.store import Store, deserialize_tx
 from coinlab.transactions import (
     PrivateTransaction,
     TransactionInput,
@@ -26,16 +27,13 @@ FIXTURE_DIR = Path(__file__).resolve().parents[1] / "conformance" / "fixtures" /
 
 
 def test_valid_fixture_loads_and_validates():
-    """Fixture válido: carga y validate_chain pasa."""
+    """Fixture válido: carga con config_for_chain (como _load_chain) y validate_chain pasa."""
     if not FIXTURE_DIR.exists():
         pytest.skip("Ejecutar scripts/generate_conformance_fixture.py primero")
     store = Store(FIXTURE_DIR)
-    config = store.load_config()
-    assert config is not None
     blocks = store.load_blocks()
     assert len(blocks) >= 1
-    ok, err = store.config_compatible_with_blocks(config, blocks)
-    assert ok, err
+    config = store.config_for_chain(blocks)
     chain = Blockchain(config)
     for block in blocks:
         ok, err = chain.add_block(block)
@@ -110,6 +108,25 @@ def test_invalid_reuse_commitment_rejected():
     ok, err = chain.state.can_apply_transaction(hijack_tx)
     assert not ok
     assert "reutilizado" in err or "Commitment" in err
+
+
+INVALID_CASES_DIR = Path(__file__).resolve().parents[1] / "conformance" / "invalid-cases"
+
+
+def test_invalid_case_input_inexistente_from_json():
+    """Invalid-case JSON: tx con input inexistente debe rechazarse por mempool."""
+    path = INVALID_CASES_DIR / "input_inexistente.json"
+    if not path.exists():
+        pytest.skip("Ejecutar scripts/generate_invalid_cases.py primero")
+    data = json.loads(path.read_text())
+    tx = deserialize_tx(data["tx"])
+    config = Config(difficulty=2)
+    chain = Blockchain(config)
+    chain.create_genesis("faucet")
+    mempool = Mempool()
+    ok, err = mempool.add_transaction_validated(tx, chain.state)
+    assert not ok
+    assert "inexistente" in err or "Input" in err
 
 
 def test_invalid_block_header_difficulty_rejected():

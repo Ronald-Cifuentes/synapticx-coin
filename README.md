@@ -124,10 +124,8 @@ simulations/            # supply, mining, double spend
 
 ```bash
 python scripts/generate_conformance_fixture.py
+python scripts/generate_invalid_cases.py
 pytest tests/test_conformance.py -v
 ```
 
-## Siguientes pasos inmediatos
-
-1. Aumentar dificultad PoW para tests de estrés
-2. Añadir más vectores a conformance/
+Fixture: 2+ bloques con tx. Invalid-cases: input_inexistente.json (golden). Vectors/ bloqueado hasta ZK/DAG.

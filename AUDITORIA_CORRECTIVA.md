@@ -207,7 +207,16 @@ pytest tests/test_config_constitutional.py::test_manipulation_config_json_fails_
 ```bash
 cd /path/to/coin
 pip install -e ".[dev]"
-python scripts/generate_conformance_fixture.py  # si fixture legado
+python scripts/generate_conformance_fixture.py
+python scripts/generate_invalid_cases.py
 pytest tests/ -v
 python -m coinlab.cli run-demo
 ```
+
+---
+
+## 9. ENDURECIMIENTO FASE 2 (conformance)
+
+- Fixture: 2+ bloques con tx (prev_hash chain ejercitada)
+- Invalid-case JSON: input_inexistente.json; test_invalid_case_input_inexistente_from_json
+- test_valid_fixture usa config_for_chain (alineado con _load_chain)

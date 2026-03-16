@@ -1,5 +1,0 @@
-{
-  "faucet": [
-    "{\"note_id\": \"fcd0cc0b1128f163\", \"owner_key\": \"faucet\", \"amount\": 100, \"nonce\": \"aeebad4a796fcc2e15dc4c6061b45ed9b373f26adfc798ca7d2d8cc58182718e\", \"asset_id\": \"BASE\", \"secret\": \"genesis_faucet_secret_mvp\"}"
-  ]
-}
