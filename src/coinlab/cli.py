@@ -34,8 +34,17 @@ def _get_store(data_dir: Path) -> Store:
 
 
 def _load_chain(store: Store, config: Optional[Config] = None) -> Blockchain:
-    chain = Blockchain(config)
+    """Carga cadena desde store. Usa config persistida si no se pasa una."""
     blocks = store.load_blocks()
+    if not blocks:
+        cfg = config or Config.default()
+        return Blockchain(cfg)
+    stored_config = store.load_config()
+    cfg = config or stored_config or Config.default()
+    ok, err = store.config_compatible_with_blocks(cfg, blocks)
+    if not ok:
+        raise RuntimeError(f"Config incoherente con bloques: {err}")
+    chain = Blockchain(cfg)
     for block in blocks:
         ok, err = chain.add_block(block)
         if not ok:
@@ -80,9 +89,12 @@ def init_chain(
         store.save_blocks([])
         store.save_wallets({})
         store.save_mempool([])
+        if store.config_file.exists():
+            store.config_file.unlink()
     config = Config(difficulty=difficulty)
     chain = Blockchain(config)
     block, faucet_note = chain.create_genesis("faucet")
+    store.save_config(config)
     store.save_blocks(chain.blocks)
     _save_wallets(store, {"faucet": [faucet_note]})
     typer.echo(f"Genesis creado. Block hash: {block.block_hash()[:16]}...")
@@ -237,7 +249,7 @@ def show_state(
 def show_utxo_equivalent(
     data_dir: Path = DATA_DIR_OPTION,
 ):
-    """Muestra notas (equivalente UTXO) por wallet."""
+    """Muestra notas por wallet (CACHE DE DEMO: wallets.json, no fuente canónica)."""
     store = _get_store(data_dir)
     owner_notes = _wallets_to_notes(store)
     for owner, notes in owner_notes.items():

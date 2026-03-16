@@ -2,34 +2,38 @@
 
 ## Propósito
 
-Vectores de prueba, fixtures y casos inválidos. **No hay implementaciones de protocolo.** Este directorio alimenta prototipos de investigación y, si los bloqueantes se cierran, futuras implementaciones. Hoy está vacío o con placeholders.
+Fixtures válidos y invalid-cases para verificar invariantes del MVP. Los tests viven en `tests/test_conformance.py`.
 
-## Estructura
+## Estructura actual
 
 ```
 conformance/
-  vectors/       — Casos válidos: ordering, supply, proofs
-  fixtures/     — Datos de prueba reutilizables
-  invalid-cases/ — Casos que deben rechazarse: inflación, conflictos, etc.
+  fixtures/
+    valid_chain/   — Genesis válido (config.json, blocks.json)
+  README.md
 ```
 
-## Qué contiene
+## Cómo generar el fixture
 
-- **vectors:** Resultados esperados de ordenación canónica, conservación de valor, auditoría agregada
-- **fixtures:** DAGs de prueba, transacciones con nullifiers, bloques con conflictos
-- **invalid-cases:** Inflación maliciosa, nullifiers duplicados, proofs inválidos
+```bash
+python scripts/generate_conformance_fixture.py
+```
 
-## Qué NO debe meterse aquí
+## Cómo ejecutar conformance
 
-- Vectores que asumen protocolo cerrado sin validación previa
-- Casos sin criterio de aceptación/rechazo definido
-- Datos de producción (no existe mainnet)
+```bash
+pytest tests/test_conformance.py -v
+```
 
-## Bloqueante que intenta cerrar
+## Invalid-cases (en tests)
 
-Los vectores alimentan la validación de:
-- TP-001 (consensus ordering)
-- TP-002 (supply correctness)
-- TP-003 a TP-006 (según corresponda)
+Los invalid-cases se ejecutan como tests:
 
-Cuando un test plan produce evidencia favorable, los artifacts van aquí. Si un test plan aborta, los invalid-cases documentan por qué.
+- **input inexistente:** tx con commitment que no está en estado → rechazado
+- **reuse commitment:** output que reutiliza commitment existente → rechazado
+- **block header inválido:** difficulty distinto a policy → rechazado
+
+## Qué NO contiene aún
+
+- vectors/ (ordering, supply proofs)
+- invalid-cases/ como archivos JSON independientes

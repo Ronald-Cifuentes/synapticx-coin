@@ -4,7 +4,7 @@ Persistencia mínima: JSON en directorio de datos.
 
 import json
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from .blocks import Block, BlockHeader
 from .chain import Blockchain, GENESIS_PREV
@@ -112,6 +112,18 @@ class Store:
         self.blocks_file = self.data_dir / "blocks.json"
         self.wallets_file = self.data_dir / "wallets.json"
         self.mempool_file = self.data_dir / "mempool.json"
+        self.config_file = self.data_dir / "config.json"
+
+    def save_config(self, config: Config) -> None:
+        """Persiste config. Usar con init-chain o al crear cadena."""
+        self.config_file.write_text(json.dumps(config.to_dict(), indent=2))
+
+    def load_config(self) -> Optional[Config]:
+        """Carga config persistida. None si no existe."""
+        if not self.config_file.exists():
+            return None
+        data = json.loads(self.config_file.read_text())
+        return Config.from_dict(data)
 
     def save_blocks(self, blocks: List[Block]) -> None:
         data = [_serialize_block(b) for b in blocks]
@@ -141,3 +153,21 @@ class Store:
             return []
         data = json.loads(self.mempool_file.read_text())
         return [_deserialize_tx(d) for d in data]
+
+    def config_compatible_with_blocks(
+        self, config: Config, blocks: List[Block]
+    ) -> Tuple[bool, Optional[str]]:
+        """
+        Verifica que config sea coherente con bloques persistidos.
+        Retorna (ok, error_message).
+        """
+        if not blocks:
+            return True, None
+        exp_diff = config.difficulty
+        for i, block in enumerate(blocks):
+            if block.header.difficulty != exp_diff:
+                return False, (
+                    f"Config incoherente con bloque {i}: "
+                    f"header.difficulty={block.header.difficulty}, config.difficulty={exp_diff}"
+                )
+        return True, None

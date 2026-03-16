@@ -70,7 +70,7 @@ def create_transfer_transaction(
     input_notes: notas a consumir
     output_amounts: montos para cada output
     output_owners: dueño de cada output
-    fee: fee para el minero
+    fee: se quema en conservación; el minero recibe solo block_reward (no fees)
     """
     if len(output_amounts) != len(output_owners):
         raise ValueError("output_amounts y output_owners deben tener misma longitud")

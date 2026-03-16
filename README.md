@@ -9,12 +9,14 @@
 - Nullifiers públicos para evitar doble gasto
 - Conservación de valor en agregado
 - Estado canónico reproducible
+- **Config persistida**: difficulty y block_reward se guardan con la cadena; recarga coherente al reiniciar
 - **Validación fuerte**: autorización real (hash(secret)==owner_secret_hash); amount y asset relevantes se resuelven contra el estado (input no es fuente de verdad); commitment único no reutilizable; coinbase según política; difficulty fijada contra policy; merkle root recomputado
 - **Reorg por trabajo acumulado** (no solo longitud)
 - Mempool rechaza tx con inputs inexistentes y conflictos por nullifier
 - CLI: init-chain, create-wallet, mint-demo-notes, create-transfer, show-chain, show-state, show-utxo-equivalent, mine-block, run-demo, validate-chain
-- Tests automatizados
+- Tests automatizados (68 tests)
 - Simulaciones: supply correctness, mining distribution, double spend
+- Conformance: fixture válido + invalid-cases (input inexistente, reuse commitment, block header inválido)
 
 ## Qué NO implementa
 
@@ -25,11 +27,20 @@
 - Disclosure complejo
 - Criptografía de producción
 
+## Política de fees
+
+**Fees quemadas.** El fee de una tx se consume en la ecuación de conservación (in = out + fee). El minero recibe solo `block_reward`; las fees no van al coinbase. Esto es deliberado en el MVP.
+
+## Wallet local
+
+**wallets.json es cache de demo, NO fuente canónica.** La fuente de verdad es la cadena (blocks.json) y el estado derivado. El archivo wallets.json es un helper para el flujo CLI que mantiene notas por owner; puede desincronizarse si se edita manualmente. No hay reconcile/rescan automático.
+
 ## Limitaciones honestas
 
 - Sigue siendo laboratorio, no seguridad de producción
 - Los primitivos (hash, commitment, nullifier) son simplificaciones para modelar semántica
 - No hay privacidad criptográfica real (el secret se revela en la tx)
+- No hay privacidad de red; la ambición grande (blockDAG, light client, etc.) sigue abierta
 - El laboratorio exige autorización verificable contra estado (owner_secret_hash); en validación contextual, amount y asset se resuelven contra el estado, no contra el input
 - Los inputs ya no se validan por autoconsistencia del atacante; hash(secret) debe coincidir con el almacenado
 - El commitment es identificador único no reutilizable; no puede reaparecer como output ni coinbase
@@ -76,7 +87,9 @@ python simulations/double-spend/run_double_spend_test.py
 
 ```
 src/coinlab/
-  crypto_primitives.py   # hash, commitment, nullifier (MVP)
+  config.py             # Config (persistida en config.json)
+  store.py              # Persistencia: blocks, wallets, mempool, config
+  crypto_primitives.py  # hash, commitment, nullifier (MVP)
   notes.py              # Note, NoteCommitment
   transactions.py       # PrivateTransaction
   state.py              # ChainState
@@ -86,12 +99,19 @@ src/coinlab/
   mempool.py            # Mempool
   miner.py              # build_and_mine_block
   cli.py                # Comandos CLI
-tests/                  # Suite de tests
-simulations/             # Supply, mining, double spend
+tests/                  # Suite de tests (68)
+conformance/            # fixtures, invalid-cases
+simulations/            # supply, mining, double spend
+```
+
+## Conformance
+
+```bash
+python scripts/generate_conformance_fixture.py
+pytest tests/test_conformance.py -v
 ```
 
 ## Siguientes pasos inmediatos
 
 1. Aumentar dificultad PoW para tests de estrés
-2. Persistir config (dificultad) con la cadena
-3. Añadir más vectores a conformance/
+2. Añadir más vectores a conformance/
