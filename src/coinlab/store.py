@@ -27,6 +27,7 @@ def _serialize_tx(tx: PrivateTransaction) -> Dict[str, Any]:
                 "nullifier": i.nullifier,
                 "amount": i.amount,
                 "asset_id": i.asset_id,
+                "secret": i.secret,
             }
             for i in tx.inputs
         ],
@@ -51,6 +52,7 @@ def _deserialize_tx(d: Dict[str, Any]) -> PrivateTransaction:
                 nullifier=i["nullifier"],
                 amount=i["amount"],
                 asset_id=i["asset_id"],
+                secret=i.get("secret", ""),
             )
             for i in d["inputs"]
         ],

@@ -24,10 +24,7 @@ def main():
         [faucet_note], [50, 50], ["alice", "bob"], fee=0
     )
     mempool = Mempool()
-    mempool.add_transaction(
-        tx1,
-        available_commitments=chain.state.commitments,
-    )
+    mempool.add_transaction_validated(tx1, chain.state)
     build_and_mine_block(chain, mempool, "miner")
 
     alice_note = out_notes[0]
@@ -39,14 +36,8 @@ def main():
     )
 
     mempool = Mempool()
-    ok1, _ = mempool.add_transaction(
-        tx_legit,
-        available_commitments=chain.state.commitments,
-    )
-    ok2, err2 = mempool.add_transaction(
-        tx_attack,
-        available_commitments=chain.state.commitments,
-    )
+    ok1, _ = mempool.add_transaction_validated(tx_legit, chain.state)
+    ok2, err2 = mempool.add_transaction_validated(tx_attack, chain.state)
     assert ok1
     assert not ok2, "Doble gasto debería ser rechazado"
     print("Doble gasto rechazado correctamente")
@@ -69,6 +60,7 @@ def main():
                 nullifier=hash_hex("nf_fake"),
                 amount=50,
                 asset_id="BASE",
+                secret="fake",
             )
         ],
         outputs=[
@@ -80,10 +72,7 @@ def main():
         ],
         fee=0,
     )
-    ok_fake, err_fake = mempool.add_transaction(
-        fake_tx,
-        available_commitments=chain.state.commitments,
-    )
+    ok_fake, err_fake = mempool.add_transaction_validated(fake_tx, chain.state)
     assert not ok_fake, "Input inexistente debería ser rechazado"
     print("Input inexistente rechazado correctamente")
 

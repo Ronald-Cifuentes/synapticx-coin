@@ -32,6 +32,7 @@ def test_tx_with_nonexistent_input_commitment_fails():
         nullifier=hash_hex("fake_nullifier"),
         amount=50,
         asset_id="BASE",
+        secret="fake",
     )
     real_output = TransactionOutput(
         commitment=CommitmentHash(hash_hex("real_out")),
@@ -94,28 +95,28 @@ def test_block_with_wrong_merkle_root_fails():
 
 
 def test_heavier_chain_wins_over_longer_chain_when_applicable():
-    """Cadena con más trabajo gana, aunque sea más corta."""
-    config_low = Config(difficulty=2)
-    config_high = Config(difficulty=4)
-    chain_long = Blockchain(config_low)
-    chain_long.create_genesis("faucet")
+    """Cadena con más trabajo gana. Misma policy: más bloques = más trabajo."""
+    config = Config(difficulty=2)
+    chain_short = Blockchain(config)
+    chain_short.create_genesis("faucet")
     from coinlab.mempool import Mempool
     from coinlab.miner import build_and_mine_block
 
-    for _ in range(3):
-        build_and_mine_block(chain_long, Mempool(), "miner")
-    work_long = cumulative_work(chain_long.blocks)
+    for _ in range(2):
+        build_and_mine_block(chain_short, Mempool(), "miner")
+    work_short = cumulative_work(chain_short.blocks, config)
 
-    chain_heavy = Blockchain(config_high)
+    chain_heavy = Blockchain(config)
     chain_heavy.create_genesis("faucet")
-    build_and_mine_block(chain_heavy, Mempool(), "miner")
-    work_heavy = cumulative_work(chain_heavy.blocks)
+    for _ in range(3):
+        build_and_mine_block(chain_heavy, Mempool(), "miner")
+    work_heavy = cumulative_work(chain_heavy.blocks, config)
 
-    assert work_heavy > work_long
-    ok, err = chain_long.reorg_to(chain_heavy.blocks)
+    assert work_heavy > work_short
+    ok, err = chain_short.reorg_to(chain_heavy.blocks)
     assert ok, err
-    assert len(chain_long.blocks) == 2
-    assert cumulative_work(chain_long.blocks) == work_heavy
+    assert len(chain_short.blocks) == 4
+    assert cumulative_work(chain_short.blocks, config) == work_heavy
 
 
 def test_validate_chain_rejects_hidden_monetary_invalidity():
@@ -128,6 +129,7 @@ def test_validate_chain_rejects_hidden_monetary_invalidity():
         nullifier=hash_hex("nf1"),
         amount=50,
         asset_id="BASE",
+        secret="fake",
     )
     fake_tx = PrivateTransaction(
         tx_id=TxId("fake"),
@@ -167,6 +169,7 @@ def test_mempool_rejects_nonexistent_input_tx():
         nullifier=hash_hex("nf"),
         amount=50,
         asset_id="BASE",
+        secret="fake",
     )
     tx = PrivateTransaction(
         tx_id=TxId("fake_tx"),
@@ -181,10 +184,7 @@ def test_mempool_rejects_nonexistent_input_tx():
         fee=0,
     )
     mempool = Mempool()
-    ok, err = mempool.add_transaction(
-        tx,
-        available_commitments=chain.state.commitments,
-    )
+    ok, err = mempool.add_transaction_validated(tx, chain.state)
     assert not ok
     assert "inexistente" in err or "Input" in err
 

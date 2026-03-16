@@ -10,17 +10,21 @@ from .crypto_primitives import hash_hex
 from .types import BlockHash
 
 
-def block_work(block: Block) -> int:
+def block_work(block: Block, expected_difficulty: int) -> int:
     """
-    Trabajo de un bloque. Mayor dificultad = más trabajo.
-    Modelo: 16^d donde d = difficulty (ceros hex al inicio).
+    Trabajo de un bloque según policy, NO según header.
+    Modelo: 16^d donde d = expected_difficulty (ceros hex al inicio).
     """
-    return 16 ** block.header.difficulty
+    return 16 ** expected_difficulty
 
 
-def cumulative_work(blocks: list) -> int:
-    """Trabajo acumulado de una cadena."""
-    return sum(block_work(b) for b in blocks)
+def cumulative_work(blocks: list, config) -> int:
+    """Trabajo acumulado de una cadena. Usa policy, no header.difficulty."""
+    from .blocks import expected_block_difficulty
+    return sum(
+        block_work(b, expected_block_difficulty(i, config))
+        for i, b in enumerate(blocks)
+    )
 
 
 def meets_difficulty(h: str, difficulty: int) -> bool:

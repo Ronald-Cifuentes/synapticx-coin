@@ -4,7 +4,14 @@ Cadena lineal PoW: bloques en orden, reorg por trabajo acumulado.
 
 from typing import List, Optional
 
-from .blocks import Block, BlockHeader, compute_merkle_root, expected_block_reward
+from .blocks import (
+    Block,
+    BlockHeader,
+    block_has_internal_nullifier_conflict,
+    compute_merkle_root,
+    expected_block_difficulty,
+    expected_block_reward,
+)
 from .config import Config
 from .crypto_primitives import hash_hex
 from .pow import cumulative_work, mine_block, validate_block_pow
@@ -22,10 +29,15 @@ def validate_block(
     config: Config,
 ) -> tuple[bool, Optional[str]]:
     """
-    Valida bloque: PoW, merkle root, coinbase policy.
-    No valida transacciones contra estado (eso se hace al aplicar).
+    Validación ESTRUCTURAL del bloque (sin estado).
+    Cubre: difficulty policy, PoW, merkle root, coinbase policy, conflictos internos,
+    validez estructural de cada tx (validate_transaction_basic).
+    NO cubre: existencia de inputs en estado (eso es contextual, se hace al aplicar).
     """
-    if not validate_block_pow(block, config.difficulty):
+    exp_diff = expected_block_difficulty(height, config)
+    if block.header.difficulty != exp_diff:
+        return False, f"Difficulty incoherente: header={block.header.difficulty}, policy={exp_diff}"
+    if not validate_block_pow(block, exp_diff):
         return False, "PoW inválido"
     expected_root = compute_merkle_root(block.transactions)
     if block.header.merkle_root != expected_root:
@@ -33,6 +45,13 @@ def validate_block(
     expected_reward = expected_block_reward(height, config)
     if block.coinbase_amount != expected_reward:
         return False, f"Coinbase inválida: {block.coinbase_amount} != {expected_reward}"
+    has_conflict, err = block_has_internal_nullifier_conflict(block.transactions)
+    if has_conflict:
+        return False, err or "Nullifier duplicado en bloque"
+    for tx in block.transactions:
+        ok, err = validate_transaction_basic(tx)
+        if not ok:
+            return False, f"Tx estructural inválida: {err}"
     return True, None
 
 
@@ -82,8 +101,8 @@ class Blockchain:
         coinbase_owner: Optional[str] = None,
     ) -> tuple[bool, Optional[str]]:
         """
-        Añade bloque si es válido.
-        Valida: prev_hash, PoW, merkle root, coinbase policy, inputs existen.
+        Añade bloque si es válido. ATÓMICO: si falla, estado no cambia.
+        Valida y aplica sobre estado temporal; solo al final promueve.
         """
         height = len(self.blocks)
         expected_prev = self.tip_hash()
@@ -94,21 +113,21 @@ class Blockchain:
         if not ok:
             return False, err
 
+        temp_state = self.state.copy()
         for tx in block.transactions:
-            ok, err = validate_transaction_basic(tx)
-            if not ok:
-                return False, f"Tx inválida: {err}"
-            ok, err = self.state.can_apply_transaction(tx)
+            ok, err = temp_state.can_apply_transaction(tx)
             if not ok:
                 return False, f"Tx no aplicable: {err}"
-            self.state.apply_transaction(tx)
+            temp_state.apply_transaction(tx)
 
-        self.state.add_commitment(
+        temp_state.add_commitment(
             block.coinbase_commitment,
             owner=coinbase_owner,
             amount=block.coinbase_amount,
+            asset_id=self.config.default_asset_id,
         )
 
+        self.state = temp_state
         self.blocks.append(block)
         return True, None
 
@@ -130,19 +149,25 @@ class Blockchain:
                 if not ok:
                     return False, f"Block {i}: {err}"
                 state.apply_transaction(tx)
-            state.add_commitment(block.coinbase_commitment, amount=block.coinbase_amount)
+            state.add_commitment(
+                block.coinbase_commitment,
+                amount=block.coinbase_amount,
+                asset_id=self.config.default_asset_id,
+            )
         return True, None
 
     def reorg_to(self, blocks: List[Block]) -> tuple[bool, Optional[str]]:
         """
         Reorg: reemplaza por blocks si tiene MAYOR trabajo acumulado.
-        No basta con ser más larga; debe tener más trabajo.
+        ATÓMICO: valida cadena alternativa completa en estado temporal;
+        solo al final reemplaza. No muta nada si falla.
+        Valida monetariamente (validate_transaction_basic) y contextualmente.
         """
-        our_work = cumulative_work(self.blocks)
-        their_work = cumulative_work(blocks)
+        our_work = cumulative_work(self.blocks, self.config)
+        their_work = cumulative_work(blocks, self.config)
         if their_work <= our_work:
             return False, f"Cadena alternativa no más pesada: {their_work} <= {our_work}"
-        state = ChainState()
+        temp_state = ChainState()
         prev_hash = GENESIS_PREV
         for i, block in enumerate(blocks):
             if block.header.prev_hash != prev_hash:
@@ -151,12 +176,16 @@ class Blockchain:
             if not ok:
                 return False, f"Cadena alternativa: {err}"
             for tx in block.transactions:
-                ok, err = state.can_apply_transaction(tx)
+                ok, err = temp_state.can_apply_transaction(tx)
                 if not ok:
                     return False, f"Cadena alternativa: {err}"
-                state.apply_transaction(tx)
-            state.add_commitment(block.coinbase_commitment, amount=block.coinbase_amount)
+                temp_state.apply_transaction(tx)
+            temp_state.add_commitment(
+                block.coinbase_commitment,
+                amount=block.coinbase_amount,
+                asset_id=self.config.default_asset_id,
+            )
             prev_hash = block.block_hash()
         self.blocks = blocks
-        self.state = state
+        self.state = temp_state
         return True, None

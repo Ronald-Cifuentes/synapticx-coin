@@ -43,18 +43,11 @@ def _load_chain(store: Store, config: Optional[Config] = None) -> Blockchain:
     return chain
 
 
-def _load_mempool(
-    store: Store,
-    used_nullifiers: Optional[set] = None,
-    available_commitments: Optional[set] = None,
-) -> Mempool:
+def _load_mempool(store: Store, chain: "Blockchain") -> Mempool:
+    """Carga mempool validando cada tx contra chain.state (ruta segura)."""
     mempool = Mempool()
     for tx in store.load_mempool():
-        mempool.add_transaction(
-            tx,
-            used_nullifiers=used_nullifiers,
-            available_commitments=available_commitments,
-        )
+        mempool.add_transaction_validated(tx, chain.state)  # ignora txs inválidas
     return mempool
 
 
@@ -145,16 +138,8 @@ def mint_demo_notes(
     tx, output_notes = create_transfer_with_output_notes(
         input_notes, output_amounts, output_owners, fee=0
     )
-    mempool = _load_mempool(
-        store,
-        chain.state.nullifiers_used,
-        chain.state.commitments,
-    )
-    ok, err = mempool.add_transaction(
-        tx,
-        used_nullifiers=chain.state.nullifiers_used,
-        available_commitments=chain.state.commitments,
-    )
+    mempool = _load_mempool(store, chain)
+    ok, err = mempool.add_transaction_validated(tx, chain.state)
     if not ok:
         typer.echo(f"Error mempool: {err}")
         raise typer.Exit(1)
@@ -202,16 +187,8 @@ def create_transfer(
     tx, output_notes = create_transfer_with_output_notes(
         input_notes, output_amounts, output_owners, fee=fee
     )
-    mempool = _load_mempool(
-        store,
-        chain.state.nullifiers_used,
-        chain.state.commitments,
-    )
-    ok, err = mempool.add_transaction(
-        tx,
-        used_nullifiers=chain.state.nullifiers_used,
-        available_commitments=chain.state.commitments,
-    )
+    mempool = _load_mempool(store, chain)
+    ok, err = mempool.add_transaction_validated(tx, chain.state)
     if not ok:
         typer.echo(f"Error mempool: {err}")
         raise typer.Exit(1)
@@ -276,11 +253,7 @@ def mine_block(
     """Mina un bloque con txs del mempool."""
     store = _get_store(data_dir)
     chain = _load_chain(store)
-    mempool = _load_mempool(
-        store,
-        chain.state.nullifiers_used,
-        chain.state.commitments,
-    )
+    mempool = _load_mempool(store, chain)
     block = build_and_mine_block(chain, mempool, miner)
     store.save_blocks(chain.blocks)
     store.save_mempool(mempool.all_transactions())
@@ -315,10 +288,7 @@ def _run_demo_in_memory() -> None:
         [faucet_note], [50, 50], ["alice", "bob"], fee=0
     )
     mempool = Mempool()
-    ok, _ = mempool.add_transaction(
-        tx1,
-        available_commitments=chain.state.commitments,
-    )
+    ok, _ = mempool.add_transaction_validated(tx1, chain.state)
     assert ok
     typer.echo("2. Tx creada: faucet -> alice(50), bob(50)")
     block2 = build_and_mine_block(chain, mempool, "miner")
@@ -327,19 +297,13 @@ def _run_demo_in_memory() -> None:
     tx2, _ = create_transfer_with_output_notes(
         [out_notes[0]], [50], ["bob"], fee=0
     )
-    ok, err = mempool.add_transaction(
-        tx2,
-        available_commitments=chain.state.commitments,
-    )
+    ok, err = mempool.add_transaction_validated(tx2, chain.state)
     assert ok
     typer.echo("4. Tx: alice -> bob 50")
     tx_double, _ = create_transfer_with_output_notes(
         [out_notes[0]], [50], ["miner"], fee=0
     )
-    ok, err = mempool.add_transaction(
-        tx_double,
-        available_commitments=chain.state.commitments,
-    )
+    ok, err = mempool.add_transaction_validated(tx_double, chain.state)
     typer.echo("5. Intento doble gasto (alice -> miner):")
     if ok:
         typer.echo("   ERROR: doble gasto aceptado (bug)")

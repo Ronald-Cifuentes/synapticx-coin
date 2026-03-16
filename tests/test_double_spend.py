@@ -20,10 +20,7 @@ def test_double_spend_same_nullifier_fails():
         [faucet_note], [50, 50], ["alice", "bob"], fee=0
     )
     mempool = Mempool()
-    ok, _ = mempool.add_transaction(
-        tx1,
-        available_commitments=chain.state.commitments,
-    )
+    ok, _ = mempool.add_transaction_validated(tx1, chain.state)
     assert ok
     build_and_mine_block(chain, mempool, "miner")
     tx2, _ = create_transfer_with_output_notes(
@@ -33,14 +30,8 @@ def test_double_spend_same_nullifier_fails():
         [out_notes[0]], [50], ["eve"], fee=0
     )
     mempool2 = Mempool()
-    ok2, _ = mempool2.add_transaction(
-        tx2,
-        available_commitments=chain.state.commitments,
-    )
+    ok2, _ = mempool2.add_transaction_validated(tx2, chain.state)
     assert ok2
-    ok3, err3 = mempool2.add_transaction(
-        tx3,
-        available_commitments=chain.state.commitments,
-    )
+    ok3, err3 = mempool2.add_transaction_validated(tx3, chain.state)
     assert not ok3
     assert "Nullifier" in err3 or "competidora" in err3 or "competid" in err3.lower()

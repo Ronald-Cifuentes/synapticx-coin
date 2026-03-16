@@ -15,12 +15,15 @@ from .types import CommitmentHash, TxId
 
 @dataclass
 class TransactionInput:
-    """Input: referencia a nota consumida (commitment) + nullifier."""
+    """Input: commitment + nullifier + amount + asset_id + witness (secret).
+    El secret permite derivar nullifier; el estado valida amount/asset contra la nota almacenada.
+    """
 
     commitment: CommitmentHash
     nullifier: str
     amount: int
     asset_id: str
+    secret: str  # Witness mínimo: para verificar nullifier = H(secret|commitment)
 
 
 @dataclass
@@ -85,6 +88,7 @@ def create_transfer_transaction(
                 nullifier=nf,
                 amount=note.amount,
                 asset_id=note.asset_id,
+                secret=note.secret,
             )
         )
 
@@ -150,6 +154,7 @@ def create_transfer_with_output_notes(
                 nullifier=nf,
                 amount=note.amount,
                 asset_id=note.asset_id,
+                secret=note.secret,
             )
         )
 

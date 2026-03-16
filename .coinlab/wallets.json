@@ -1,8 +1,5 @@
 {
   "faucet": [
-    "{\"note_id\": \"811c979cfe373fa2\", \"owner_key\": \"faucet\", \"amount\": 50, \"nonce\": \"702b1f10b925babda538a6cbfba40491\", \"asset_id\": \"BASE\", \"secret\": \"ee3a31ff3f0d78e4f2a34059b19fa8e8e0ca268de820c675364faf64a2b8c969\"}"
-  ],
-  "alice": [
-    "{\"note_id\": \"5a800d448a29a84a\", \"owner_key\": \"alice\", \"amount\": 50, \"nonce\": \"e18f82a9dd9128407e5c10e93404e0e4\", \"asset_id\": \"BASE\", \"secret\": \"e11d4d6ce2842e18e046ce968b4acd60f82aa3a142a0325d6075db87f29c4a1e\"}"
+    "{\"note_id\": \"d8a8c59d768a6816\", \"owner_key\": \"faucet\", \"amount\": 100, \"nonce\": \"aeebad4a796fcc2e15dc4c6061b45ed9b373f26adfc798ca7d2d8cc58182718e\", \"asset_id\": \"BASE\", \"secret\": \"genesis_faucet_secret_mvp\"}"
   ]
 }

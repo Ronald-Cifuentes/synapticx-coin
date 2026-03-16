@@ -32,10 +32,7 @@ def main():
             [faucet_note], [half, amt - half], ["alice", "bob"], fee=0
         )
         faucet_note = out_notes[i % 2]
-        mempool.add_transaction(
-            tx,
-            available_commitments=chain.state.commitments,
-        )
+        mempool.add_transaction_validated(tx, chain.state)
         build_and_mine_block(chain, mempool, "miner")
         total_minted += config.block_reward
 

@@ -1,11 +1,14 @@
 """
 Mempool: pool de transacciones pendientes.
-Rechaza tx con inputs inexistentes y conflictos por nullifier.
+Ruta segura por defecto: add_transaction_validated(tx, chain_state).
 """
 
-from typing import Dict, List, Optional, Set
+from typing import Dict, List, Optional, Set, TYPE_CHECKING
 
-from .transactions import PrivateTransaction
+from .transactions import PrivateTransaction, validate_transaction_basic
+
+if TYPE_CHECKING:
+    from .state import ChainState
 
 
 class Mempool:
@@ -15,16 +18,33 @@ class Mempool:
         self._txs: Dict[str, PrivateTransaction] = {}
         self._nullifiers_pending: Set[str] = set()
 
-    def add_transaction(
+    def add_transaction_validated(
+        self,
+        tx: PrivateTransaction,
+        chain_state: "ChainState",
+    ) -> tuple[bool, Optional[str]]:
+        """
+        Ruta SEGURA: valida tx contra estado canónico.
+        Usa can_apply_transaction (witness, amount, nullifier derivado).
+        """
+        ok, err = validate_transaction_basic(tx)
+        if not ok:
+            return False, err
+        ok, err = chain_state.can_apply_transaction(tx)
+        if not ok:
+            return False, err
+        return self._add_transaction_internal(
+            tx,
+            used_nullifiers=chain_state.nullifiers_used,
+        )
+
+    def _add_transaction_internal(
         self,
         tx: PrivateTransaction,
         used_nullifiers: Optional[Set[str]] = None,
         available_commitments: Optional[Set[str]] = None,
     ) -> tuple[bool, Optional[str]]:
-        """
-        Añade tx si: inputs existen, no hay conflicto de nullifier.
-        available_commitments: si None, no se valida existencia de inputs.
-        """
+        """Interno: verifica conflictos de nullifier."""
         if available_commitments is not None:
             from .state import tx_inputs_exist_in_state
 
@@ -44,6 +64,22 @@ class Mempool:
         self._txs[tx.tx_id] = tx
         self._nullifiers_pending.update(nfs)
         return True, None
+
+    def add_transaction(
+        self,
+        tx: PrivateTransaction,
+        used_nullifiers: Optional[Set[str]] = None,
+        available_commitments: Optional[Set[str]] = None,
+    ) -> tuple[bool, Optional[str]]:
+        """
+        DEPRECADO para flujo normal: usa add_transaction_validated(tx, chain_state).
+        Mantenido para compatibilidad; requiere available_commitments para seguridad.
+        """
+        return self._add_transaction_internal(
+            tx,
+            used_nullifiers=used_nullifiers,
+            available_commitments=available_commitments,
+        )
 
     def remove_transaction(self, tx_id: str) -> None:
         """Elimina tx del mempool (ej. ya incluida en bloque)."""

@@ -21,6 +21,7 @@ src/coinlab.egg-info/dependency_links.txt
 src/coinlab.egg-info/entry_points.txt
 src/coinlab.egg-info/requires.txt
 src/coinlab.egg-info/top_level.txt
+tests/test_atomicity.py
 tests/test_chain_pow.py
 tests/test_cli_smoke.py
 tests/test_critical_validation.py
